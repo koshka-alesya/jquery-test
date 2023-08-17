@@ -1,0 +1,724 @@
+<script>
+  let app = {
+	environment: null,
+	context: {
+	  email: null,
+	  partyId: null,
+	  countryEntity: null,
+	  globalEntity: null,
+	  locale: null,
+	},
+	init: function() {
+
+	  hpe.supplies.profile();
+	  hpe.supplies.mojs();
+	  hpe.supplies.crud();
+	  hpe.supplies.q.end(function() {
+		hpe.fn.resizeable();
+		mo.init();
+		document.querySelector('.dxpModal').remove();	
+		app.data.init(function() {
+		  app.dom();
+		});
+	  }); 
+	},
+	topHeader: [],
+	buildTopHeader: function() {
+	  app.topHeader = [
+		{
+		  name: app.reference.translation.translate('programStatusCompany'),
+		  id: 'company',
+		  partyId: null,
+		  icon: '<span class="icoCompany"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="archive" width="50px" height="70px"><path fill="none" stroke="#666" stroke-width="2" d="M3,23 L21,23 L21,6 L3,6 L3,23 Z M9,14 L15,14 L15,10 L9,10 L9,14 Z M1,6 L23,6 L23,1 L1,1 L1,6 Z"></path></svg></span>',
+		  legends: [
+			{
+			  text: app.reference.translation.translate('legendLearnMore'),
+			  icon: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>'
+
+			},
+			{
+			  text: app.reference.translation.translate('legendBenefits'),
+			  icon: '<span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#666666" stroke="#666666" stroke-width="2"/><path d="M7 12L11 15L16 8" stroke="white" stroke-width="2"/></svg></span>'
+			},
+			{
+			  text: app.reference.translation.translate('legendEnrolled'),
+			  icon: '<span class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 22 22" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 11C0 4.92487 4.92487 0 11 0C17.0751 0 22 4.92487 22 11C22 17.0751 17.0751 22 11 22C4.92487 22 0 17.0751 0 11ZM11 2C6.02944 2 2 6.02944 2 11C2 15.9706 6.02944 20 11 20C15.9706 20 20 15.9706 20 11C20 6.02944 15.9706 2 11 2ZM6 11C6 8.23858 8.23858 6 11 6C13.7614 6 16 8.23858 16 11C16 13.7614 13.7614 16 11 16C8.23858 16 6 13.7614 6 11ZM11 8C9.34315 8 8 9.34315 8 11C8 12.6569 9.34315 14 11 14C12.6569 14 14 12.6569 14 11C14 9.34315 12.6569 8 11 8Z" fill="#666"/></svg></span>'
+			},
+			{
+			  text: app.reference.translation.translate('legendBenefitsAtRisk'),
+			  icon: '<span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 3L22 21H2L12 3Z" fill="#FFE75E" stroke="#FFE75E" stroke-width="2" stroke-linejoin="round"/><path d="M12 9V15M12 16V18" stroke="black" stroke-width="2"/></svg></span>'
+			}
+		  ]
+		},
+		{
+		  name: app.reference.translation.translate('programRequirements'),
+		  id: 'requirements',
+		  remaining: {
+			days: '0',
+			text: app.reference.translation.translate('daysRemaining'),
+			icon: '<span class="icoRequirements"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="calendar" width="25px" height="25px"><path fill="none" stroke="#666" stroke-width="2" d="M2,5 L22,5 L22,22 L2,22 L2,5 Z M18,5 L18,1 M6,5 L6,1 M2,10 L22,10"></path></svg></span>'
+		  },
+		  requirements: [
+			{
+			  text: app.reference.translation.translate('requirementsCompleted'),
+			  no: '0',
+			  icon: '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="user expert" width="40px" height="40px"><path fill="none" stroke="#00B388" stroke-width="2" d="M8,11 C10.7614237,11 13,8.76142375 13,6 C13,3.23857625 10.7614237,1 8,1 C5.23857625,1 3,3.23857625 3,6 C3,8.76142375 5.23857625,11 8,11 Z M14.6431888,15.6961461 C14.3091703,14.6675626 13.7524493,13.7598949 13.0233822,13.0234994 C11.7718684,11.7594056 10.0125018,11 8,11 C4,11 1,14 1,18 L1,23 L11,23 M12,18.8235294 L16.1904762,22 L23,13"></path></svg>'
+			},
+			{
+			  text: app.reference.translation.translate('requirementsInProgress'),
+			  no: '0',
+			  icon: '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="user" width="40px" height="40px"><path fill="none" stroke="#666" stroke-width="2" d="M8,24 L8,19 M16,24 L16,19 M3,24 L3,19 C3,14.0294373 7.02943725,11 12,11 C16.9705627,11 21,14.0294373 21,19 L21,24 M12,11 C14.7614237,11 17,8.76142375 17,6 C17,3.23857625 14.7614237,1 12,1 C9.23857625,1 7,3.23857625 7,6 C7,8.76142375 9.23857625,11 12,11 Z"></path></svg>'
+			},
+			{
+			  text: app.reference.translation.translate('requirementsGaps'),
+			  no: '0',
+			  icon: '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="user" width="40px" height="40px"><path fill="none" stroke="#ddd" stroke-width="2" d="M8,24 L8,19 M16,24 L16,19 M3,24 L3,19 C3,14.0294373 7.02943725,11 12,11 C16.9705627,11 21,14.0294373 21,19 L21,24 M12,11 C14.7614237,11 17,8.76142375 17,6 C17,3.23857625 14.7614237,1 12,1 C9.23857625,1 7,3.23857625 7,6 C7,8.76142375 9.23857625,11 12,11 Z"></path></svg>'
+			}
+		  ]
+		},
+		{
+		  name: app.reference.translation.translate('insignia'),
+		  id: 'insignia',
+		  iframe: 'https://partner.hpe.com/group/prp/jump/-/link/192812?id=1f75df77-f816-47c1-88fe-9c3e9f6a8026&fid=1412'
+		}
+	  ];
+	  return app.topHeader;
+	},
+	coes: function() {
+	  return [
+		{
+		  name: 'Build',
+		  description: app.reference.translation.translate('buildDescription'),
+		  icon: {
+			svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="user worker" width="40px" height="40px"><path fill="none" stroke="#135265" stroke-width="2" d="M3,6 L21,6 L3,6 Z M10,2 L10,4 M14,2 L14,4 M16,12 C18.3736719,13.1826446 20,15.6506255 20,19 L20,23 L4,23 L4,19 C4,15.6457258 5.6310898,13.1754259 8,12 M12,16.5 L12,23 M12,13 C15.3137085,13 18,10.3137085 18,7 C18,3.6862915 15.3137085,1 12,1 C8.6862915,1 6,3.6862915 6,7 C6,10.3137085 8.6862915,13 12,13 Z M8,12 C8,14.209139 9.790861,16 12,16 L12,16 C14.209139,16 16,14.209139 16,12"></path></svg></span>'
+		  },
+		  agreements: [
+			{
+			  name: app.reference.translation.translate('solutionsDevelopment'),
+			  id: 'build-sd',
+			  bus: [		
+				{
+				  name: 'Hybrid Cloud',
+				  iCertisName: "",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('comingSoon'),
+				  }
+				},
+				{
+				  name: 'Aruba',
+				  iCertisName: "",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('comingSoon'),
+				  }
+				}
+			  ]
+
+			},
+			{
+			  name: app.reference.translation.translate('integrationInterperability'),
+			  id: 'build-ii',
+			  bus: [
+				{
+				  name: 'Hybrid Cloud',
+				  iCertisName: "",
+				  EPI: "HC Tech Integration and Interoperability COE", //app.environment == "PROD" ? "HC Tech Integration and Interoperability COE" : "G_COE_TII",
+				  link: app.environment == "PROD" ? "https://prp-dxp.it.hpe.com/group/prp/hybrid-cloud-technology-validation" : '',
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('learnMore'),
+				  }
+				},
+				{
+				  name: 'Aruba',
+				  iCertisName: "",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('comingSoon'),
+				  },
+				  style: "opacity:0;pointer-events:none;"
+				},
+			  ]
+
+			}
+		  ]
+		},
+		{
+		  name: 'Sell',
+		  description: app.reference.translation.translate('sellDescription'),
+		  icon: {
+			svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="user expert" width="40px" height="40px"><path fill="none" stroke="#6ad2cf" stroke-width="2" d="M8,11 C10.7614237,11 13,8.76142375 13,6 C13,3.23857625 10.7614237,1 8,1 C5.23857625,1 3,3.23857625 3,6 C3,8.76142375 5.23857625,11 8,11 Z M14.6431888,15.6961461 C14.3091703,14.6675626 13.7524493,13.7598949 13.0233822,13.0234994 C11.7718684,11.7594056 10.0125018,11 8,11 C4,11 1,14 1,18 L1,23 L11,23 M12,18.8235294 L16.1904762,22 L23,13"></path></svg></span>'
+		  },
+		  agreements: [
+			{
+			  name: app.reference.translation.translate('asAService'),
+			  id: 'sell-aas',
+			  bus: [
+
+				{
+				  name: 'Hybrid Cloud',
+				  iCertisName: "As a Service (Hybrid Cloud)",
+				  EPI: "todo",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('comingSoon'),
+				  }
+				},
+				{
+				  name: 'Aruba',
+				  iCertisName: "As a Service (Aruba)",
+				  link: app.environment == "PROD" ? "https://prp-dxp.it.hpe.com/group/prp/aruba-as-a-service" : app.util.getRedirectLink("https://prp-dxp.it.hpe.com/group/prp/aruba-as-a-service-v2"),
+				  EPI: "Aruba as-a-Service COE", //app.environment == "PROD" ? "Aruba as-a-Service COE" :  "G_COE_ARUBA_AAS",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('learnMore'),
+				  }
+				},
+			  ]
+
+			},
+		  ]
+		},
+		{
+		  name: 'Service',
+		  description: app.reference.translation.translate('serviceDescription'),
+		  icon: {
+			svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="user manager" width="40px" height="40px"><path fill="none" stroke="#7f55de" stroke-width="2" d="M16,12 C18.3736719,13.1826446 20,15.6506255 20,19 L20,23 L4,23 L4,19 C4,15.6457258 5.6310898,13.1754259 8,12 M12,13 C15.3137085,13 18,10.3137085 18,7 C18,3.6862915 15.3137085,1 12,1 C8.6862915,1 6,3.6862915 6,7 C6,10.3137085 8.6862915,13 12,13 Z M18,7 C16.5,7 15,7.3599999 13,5 C11,7.3599999 8.5,8 6,7 M7,13 L12.0249378,18.2571942 L17,13 M12,18 L12,23"></path></svg></span>'
+		  },
+		  agreements: [
+			{
+			  name: app.reference.translation.translate('customerSuccess'),
+			  id: 'service-cs',
+			  bus: [
+
+				{
+				  name: 'Hybrid Cloud',
+				  iCertisName: "",
+				  EPI: "HC Customer Success COE", //app.environment == "PROD" ? "HC Customer Success COE" : "G_COE_CS",
+				  link: app.environment == "PROD" ? "https://prp-dxp.it.hpe.com//group/prp/hybrid-cloud-customer-success" : "",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('learnMore'),
+				  }
+				},
+				{
+				  name: 'Aruba',
+				  iCertisName: "Customer Success  (Aruba)",
+				  link: app.environment == "PROD" ? "https://prp-dxp.it.hpe.com/group/prp/aruba-customer-success" : app.util.getRedirectLink("https://prp-dxp.it.hpe.com/group/prp/aruba-customer-success-v2"),
+				  EPI: "Aruba Customer Success COE", //app.environment == "PROD" ? "Aruba Customer Success COE" : "G_COE_ARUBA_CS",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('learnMore'),
+				  }
+				},
+			  ]
+
+			},
+			{
+			  name: app.reference.translation.translate('managedServices'),
+			  id: 'service-ms',
+			  bus: [
+
+				{
+				  name: 'Hybrid Cloud',
+				  iCertisName: "",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('comingSoon'),
+				  }
+				},
+				{
+				  name: 'Aruba',
+				  iCertisName: "Managed Services  (Aruba)",
+				  link: app.environment == "PROD" ? "https://partner.hpe.com/group/prp/aruba-managed-services" : app.util.getRedirectLink("https://prp-dxp.it.hpe.com/group/prp/aruba-managed-services-v2"),
+				  EPI: "Aruba Managed Services COE", //app.environment == "PROD" ? "Aruba Managed Services COE" : "COE_ARUBA_MS",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('learnMore'),
+				  }
+				},
+			  ]
+
+			},
+			{
+			  name: app.reference.translation.translate('professionalServices'),
+			  id: 'service-ps',
+			  bus: [	
+				{
+				  name: 'Hybrid Cloud',
+				  iCertisName: "",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('comingSoon'),
+				  }
+				},
+				{
+				  name: 'Aruba',
+				  iCertisName: "Professional Services  (Aruba)",
+				  link: app.environment == "PROD" ?  "https://partner.hpe.com/group/prp/aruba-professional-services" : app.util.getRedirectLink("https://prp-dxp.it.hpe.com/group/prp/aruba-professional-services-v2"),
+				  EPI: "Aruba Professional Services COE", //app.environment == "PROD" ? "Aruba Professional Services COE" : "G_COE_ARUBA_PS",
+				  status: {
+					svg: '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>',
+					description: app.reference.translation.translate('learnMore'),
+				  }
+				},
+			  ]
+
+			},
+		  ]
+		}
+	  ]
+	},
+	dom: function() {
+
+	  document.querySelector('#prompt').remove();
+	  document.querySelector('body > div.form').innerHTML += `
+<section class="wrapper heading"><h1>` + app.reference.translation.translate('HeaderText') + `</h1></section>
+<section class="spacer"></section>
+<section class="wrapper topHeader"><div></div></section>
+<section class="spacer"></section>
+<section class="wrapper coeInfo"><div></div></section>
+`;
+
+	  app.buildTopHeader();
+	  app.topHeader[0].partyId = app.context.partyId;
+
+	  var index = 0;
+	  app.topHeader.forEach(function(top) {
+		//if(index > 0)
+		//return;
+		index++;
+
+		if (top.id == 'company') {
+		  var companyName = "[SSOData.PartnerName]";
+		  if(profile.data && profile.data.company)
+			companyName = profile.data.company.Name || profile.data.company.name || top.name
+
+		  document.querySelector('.wrapper.topHeader>div').innerHTML += '<div class="col3" col-id=' + top.id + '>' +
+			'<div class="thead">' +
+			'<div>' + top.icon + '</div>' +
+			'<div>' +
+			'<h4>' + companyName + '</h4>' +
+			'<p>Party ID: ' + top.partyId + '</p>' +
+			'</div>' +
+			'</div>' +
+			'<p class="legend">' + app.reference.translation.translate('legend') + '</p><div class="legends"></div>' +
+			'</div>';
+		  top.legends.forEach(function(legend) {
+			document.querySelector('.legends').innerHTML += '<div>' + legend.icon + '<span>' + legend.text + '</span></div>';
+		  });
+		} 
+		else if (top.id == 'requirements') {
+		  document.querySelector('.wrapper.topHeader>div').innerHTML += `
+<div class="col3" col-id=`+top.id+`>
+<div class="coming-soon">
+Coming soon
+  </div>
+<div id="calendar-widget">
+<div id="calendar-loader">
+<div id="calendar-loader-progress" style="width:50%"></div>
+  </div>
+<div id="calendar-content">
+<div id="calendar-icon">
+<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M18.5 4.00049V0.000488281V4.00049ZM7.5 18.0005H5.5H7.5ZM19.5 18.0005H9.5H19.5ZM7.5 14.0005H5.5H7.5ZM19.5 14.0005H9.5H19.5ZM6.5 4.00049V0.000488281V4.00049ZM1.5 9.00049H23.5H1.5ZM1.5 23.0005H23.5V4.00049H1.5V23.0005Z" stroke="#666666" stroke-width="2"/>
+  </svg>
+  </div>
+<div id="calendar-days">`+top.remaining.days+`</div>
+<div id="calendar-label">`+top.remaining.text+`</div>
+  </div>
+  </div>
+<div id="requirements-widget">
+<h4>Program requirements</h4>
+<div id="requirements-certifications"></div>
+  </div>
+  </div>
+`;
+		  top.requirements.forEach(function(requirement) {
+			document.querySelector('#requirements-certifications').innerHTML += `
+<div class="item">
+<div class="icon">
+`+requirement.icon+`
+<div class="count">`+requirement.no+`</div>
+  </div>
+<div class="label">`+requirement.text+`</div>
+  </div>
+`;
+		  });
+		}
+		else if(top.id == 'insignia') {
+		  document.querySelector('.wrapper.topHeader>div').innerHTML += `
+<div class="col3" col-id="`+top.id+`">
+<div class="coming-soon">
+Coming soon
+  </div>
+<div id="insignia-selection">
+<div id="insignia-selection-heading">
+<span class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 12L10 15L17 8M20 15C19 16 21.25 18.75 20 20C18.75 21.25 16 19 15 20C14 21 13.5 23 12 23C10.5 23 10 21 9 20C8 19 5.25 21.25 4 20C2.75 18.75 5 16 4 15C3 14 1 13.5 1 12C1 10.5 3 10 4 9C5 8 2.75 5.25 4 4C5.25 2.75 8 5 9 4C10 3 10.5 1 12 1C13.5 1 14 3 15 4C16 5 18.75 2.75 20 4C21.25 5.25 19 8 20 9C21 10 23 10.5 23 12C23 13.5 21 14 20 15Z" stroke="#666666" stroke-width="2"/></svg></span>
+Insignia
+  </div>
+<div id="insignia-selection-options">
+<select>
+<option>Select insignia</option>
+  </select>
+  </div>
+  </div>
+<div id="insignia-preview"></div>
+<div id="insignia-download">
+<span class="icon"><svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 8.18182V11.4545H13V8.18182M7 8V0M7 8L3.18182 4.18182M7 8L10.8182 4.18182" stroke="#666666" stroke-width="2"/></svg></span>
+<button>Download</button>
+  </div>
+  </div>
+`;	
+		}
+	  });
+	  app.coes().forEach(function(coe) {
+		document.querySelector('.wrapper.coeInfo>div').innerHTML += '<div class="col3 fixBorder">' +
+		  '<div class="header">' + coe.icon.svg + '<h3>' + coe.name + '</h3></div>' +
+		  '<p class="description">' + coe.description + '</span></p>' +
+		  '</div>';
+		document.querySelector('.wrapper.coeInfo>div').innerHTML += '<div class="col3 special" style="grid-row-start: 2;" coe-name=' + coe.name + '><hr style="border-color: #ddd; opacity: .2;"></div>';
+
+		coe.agreements.forEach(function(agreement) {
+		  document.querySelector('.col3.special[coe-name=' + coe.name + ']').innerHTML += '<div class="container" agreement-id=' + agreement.id + '>' +
+			'<h4>' + agreement.name + '</h4>' +
+			'<div class="innerContainer"></div>' +
+			'</div>';
+
+		  agreement.bus.forEach(function(bu) {
+			bu.status.svg = '<span class="ico"><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="circle information" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M12,22 C17.5228475,22 22,17.5228475 22,12 C22,6.4771525 17.5228475,2 12,2 C6.4771525,2 2,6.4771525 2,12 C2,17.5228475 6.4771525,22 12,22 Z M12,10 L12,18 M12,6 L12,8"></path></svg></span>';
+
+
+			if(bu.iCertisName || (bu.EPI && bu.EPI != "todo")) {
+			  var status = app.data.getStatus(bu.iCertisName, bu.EPI);
+
+			  if(bu.name.includes("Aruba")) {
+				if(status == "Candidate")
+				{
+				  bu.status.svg = '<span style=" display: inline-block; width: 20px; height: 20px; border-radius: 50%; "> <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 11C0 4.92487 4.92487 0 11 0C17.0751 0 22 4.92487 22 11C22 17.0751 17.0751 22 11 22C4.92487 22 0 17.0751 0 11ZM11 2C6.02944 2 2 6.02944 2 11C2 15.9706 6.02944 20 11 20C15.9706 20 20 15.9706 20 11C20 6.02944 15.9706 2 11 2ZM6 11C6 8.23858 8.23858 6 11 6C13.7614 6 16 8.23858 16 11C16 13.7614 13.7614 16 11 16C8.23858 16 6 13.7614 6 11ZM11 8C9.34315 8 8 9.34315 8 11C8 12.6569 9.34315 14 11 14C12.6569 14 14 12.6569 14 11C14 9.34315 12.6569 8 11 8Z" fill="#FF8300"/></svg></span>';
+				  bu.status.description =  app.reference.translation.translate('enrolled');
+				}
+
+				if(status == "Member") 
+				{
+				  bu.status.svg = '<span style=" display: inline-block; width: 20px; height: 20px; background: #ff8803; border-radius: 50%; "><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="form-checkmark" width="20px" height="20px"><polyline fill="none" stroke="#fff" stroke-width="2" points="6 13 10.2 16.6 18 7"></polyline></svg></span>';
+				  bu.status.description =  app.reference.translation.translate('fullBenefits');
+				}
+
+				if(status == "Expired") 
+				{
+				  bu.status.svg = '<span style=" display: inline-block; width: 20px; height: 20px;  border-radius: 50%; "> <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.7031 1.70318C11.3148 1.31483 10.6897 1.31025 10.2968 1.70318L1.70314 10.2968C1.31479 10.6852 1.31021 11.3102 1.70314 11.7032L10.2968 20.2968C10.6851 20.6852 11.3102 20.6898 11.7031 20.2968L20.2968 11.7032C20.6851 11.3148 20.6897 10.6898 20.2968 10.2968L11.7031 1.70318Z" fill="#CA2B4E" stroke="#CA2B4E" stroke-width="2"/><path d="M7.98242 7.98264L13.6999 13.7002M7.98242 13.7002L13.6999 7.98264L7.98242 13.7002Z" stroke="white" stroke-width="2"/></svg></span>';
+				  bu.status.description =  app.reference.translation.translate('benefitsExpired');
+				}
+			  }
+			  else {
+				if(status == "Candidate")
+				{
+				  bu.status.svg = '<span style=" display: inline-block; width: 20px; height: 20px; border-radius: 50%; "><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 11C0 4.92487 4.92487 0 11 0C17.0751 0 22 4.92487 22 11C22 17.0751 17.0751 22 11 22C4.92487 22 0 17.0751 0 11ZM11 2C6.02944 2 2 6.02944 2 11C2 15.9706 6.02944 20 11 20C15.9706 20 20 15.9706 20 11C20 6.02944 15.9706 2 11 2ZM6 11C6 8.23858 8.23858 6 11 6C13.7614 6 16 8.23858 16 11C16 13.7614 13.7614 16 11 16C8.23858 16 6 13.7614 6 11ZM11 8C9.34315 8 8 9.34315 8 11C8 12.6569 9.34315 14 11 14C12.6569 14 14 12.6569 14 11C14 9.34315 12.6569 8 11 8Z" fill="#01A982"/></svg></span>';
+				  bu.status.description =  app.reference.translation.translate('enrolled');
+				}
+
+				if(status == "Member") 
+				{
+				  bu.status.svg = '<span style=" display: inline-block; width: 20px; height: 20px; background: #00B388; border-radius: 50%; "><svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="form-checkmark" width="20px" height="20px"><polyline fill="none" stroke="#fff" stroke-width="2" points="6 13 10.2 16.6 18 7"></polyline></svg></span>';
+				  bu.status.description =  app.reference.translation.translate('fullBenefits');
+				}
+
+				if(status == "Expired") 
+				{
+				  bu.status.svg = '<span style=" display: inline-block; width: 20px; height: 20px; border-radius: 50%; "> <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.7031 1.70318C11.3148 1.31483 10.6897 1.31025 10.2968 1.70318L1.70314 10.2968C1.31479 10.6852 1.31021 11.3102 1.70314 11.7032L10.2968 20.2968C10.6851 20.6852 11.3102 20.6898 11.7031 20.2968L20.2968 11.7032C20.6851 11.3148 20.6897 10.6898 20.2968 10.2968L11.7031 1.70318Z" fill="#CA2B4E" stroke="#CA2B4E" stroke-width="2"/><path d="M7.98242 7.98264L13.6999 13.7002M7.98242 13.7002L13.6999 7.98264L7.98242 13.7002Z" stroke="white" stroke-width="2"/></svg></span>';
+				  bu.status.description =  app.reference.translation.translate('benefitsExpired');
+				}
+			  }
+
+
+			}
+
+			if(bu.link)
+			{
+			  bu.name =  '<a href="' + bu.link + '" target="_blank">' +  bu.name + '</a>';
+			  bu.status.description =  '<a href="' + bu.link + '" target="_blank">' +  bu.status.description + '</a>';
+			}
+
+			let style = "";
+			if(bu.style)
+			  style = bu.style;
+
+			document.querySelector('.container[agreement-id=' + agreement.id + '] .innerContainer').innerHTML += '<div class="bu" style="'+style+'"><p>' + bu.status.svg + '<span>' + bu.name + '</span>' + '</p>' + '<span>' + bu.status.description + '</span></div>';
+
+		  });
+		});
+	  });
+
+	  mo.fn.overlay.hide();
+	},
+	data: {
+	  icertis: {
+		raw: null
+	  },
+	  init: function(cb) {
+		app.data.context(function(error) {
+		  if(error)
+			return app.error(error);
+
+		  if(!app.context.partyId ||  app.context.partyId.toString().length != 10)
+			return app.error("Invalid PartyId provided. Please check the profile and/or try again later.");
+
+		  app.reference.init(function() {
+
+			app.data.search(function(data) {
+			  if(!data)
+				return app.error("Critical error encountered while retrieving the data from the System. Please try again later.");
+			  if(data && !data.Success && data.Code != "XAAS-04") {
+				if(!data.Response)
+				  return app.error("Failed to retrieve critical data; please try again later"+'<br>'+data.Message);
+				if(!data.Response.success)
+				  return app.error("Failed to retrieve critical data; please try again later"+"<br>"+data.Response.message);
+			  }
+
+			  app.data.icertis.raw = data.Response.data;
+			  cb();
+			});
+		  });
+		});
+	  },
+	  context: function(cb) {
+		app.context.email = "[SSOData.Email]";
+		if(app.context.email.includes("@hpe.com"))
+		  return cb("Page is not available for HPE users. Please use simulation to load the page for a different type of user.");
+
+		app.environment = ("[SSOData.env]" || "prod").toUpperCase();
+		app.context.partyId = "[SSOData.PartyId]"; 
+
+		
+
+		var locale = 'en_US';
+		var locales = ['en_US','pt_BR','es_ES','fr_FR','de_DE','it_IT','tr_TR','ru_RU','in_ID','ko_KR','ja_JP','zh_TW','zh_CN'];
+		var  uLocale = "[SSOData.PreferredLanguageCode]" + "_" + "[SSOData.CountryCode]";
+		if(locales.indexOf(uLocale) > -1)
+		  locale = uLocale;
+		app.context.locale = locale;
+		profile.get({ email: app.context.email } , function(p) {
+		  app.context.profile = p;
+		  cb();
+		});
+	  },
+	  search: function(cb) {
+		// WARNING: For POST requests, body is set to null by browsers.
+		var data = JSON.stringify({
+		  "partyId": app.context.partyId,
+		  "countryEntity": app.context.countryEntity || "",
+		  "globalEntity": app.context.globalEntity || "",
+		  "config": {
+			"type": [
+			  "ICMChannelDXP",
+			  "ICMChannelT2",
+			  "ICMChannelT1"
+			],
+			"brt": [
+			  "RS2",
+			  "DIS",
+			  "RS1",
+			  "SP2"
+			],
+			"status": {
+			  "draft": false,
+			  "pending": false,
+			  "inactive": false,
+			  "active": true,
+			  "cancelled": false
+			},
+			"columns": [
+			  "ICMTrack",
+			  "ICMIsAmendment",
+			  "ICMAgreementCode",
+			  "ICMPANumber",
+			  "ICMCenterofExpertise",
+			  "ICMAgreementCode",
+			  "Name",
+			  "ICMBusinessRelationshipDescription",
+			  "ICMEffectiveDate",
+			  "ICMExpiryDate",
+			  "ICMContractName",
+			  "ICMStatus",
+			  "ICMExternalSignatory",
+			  "ICMExternalSignatory2",
+			  "ICMExternalSignatoryDate",
+			  "ICMParentEntityInstanceId",
+			  "ICMExpiryDate",
+			  "ICMLevelofContracts",
+			  "ICMParticipatingParties",
+			  "ICMParticipatingCEs",
+			  "ICMParticipatingGEs",
+			  "ICMExternalSignatory3Name",
+			  "ICMAgreementStatusforDXP",
+			  "ICMLegalTAXID",
+			  "ICMCountry",
+			  "ICMLegalName",
+			  "ICMPartyID",
+			  "ICMContractTypeName",
+			  "ICMS4Status",
+			  "ICMSignatureType"
+			],
+			"coe": {
+			  "columns": [
+				"ICMCenterofExpertise",
+				"parentType",
+				"ICMAgreementCode",
+				"ICMParentEntityInstanceId",
+				"ICMParentContractId",
+				"ICMParentContractSysId",
+				"status",
+				"ICMContractTypeName"
+			  ],
+			  "amendment": true
+			},
+			"amendment": true,
+			"participating": true
+		  },
+		  "debug": false,
+		  "page": 1,
+		  "pageSize": 50
+		});
+
+		var xhr = new XMLHttpRequest();
+		xhr.withCredentials = true;
+
+		xhr.addEventListener("readystatechange", function() {
+		  if(this.readyState === 4) {
+			var obj = null;
+			try
+			{
+			  obj = JSON.parse(this.responseText);
+			}
+			catch(c) {
+
+			}
+			mo.fn.overlay.hide();
+			cb(obj);
+		  }
+		});
+
+		mo.fn.overlay.show({loading:true, close:false});
+
+		xhr.open("POST", "https://hpe-rfb.it.hpe.com/resources/rs/custom/php/xaas" + enviroment[app.environment].php.folder  + "/search.php");
+		xhr.setRequestHeader("Content-Type", "application/json");
+
+		xhr.send(data);
+	  },
+	  getStatus: function(coeName, EPI) {
+		//if we found an agreement with active coe -> return true, else false
+		var agr = app.data.icertis.raw.find(agr => agr.coe.find(coe => coe.iCMCenterofExpertise == coeName) != null);
+
+		var pa = JSON.parse(`[SSOData.PartnerAttribute]`);
+
+		/*if(app.environment == "STG") 
+		{ 
+		  if(!agr)
+			return false;
+
+		  if(agr.logical == "Active")
+		  {
+			if(app.context.profile && app.context.profile.epi && EPI)
+			{
+			  var EPI = app.context.profile.epi.find(x => x.EPICode.includes(EPI))
+			  if(!EPI) 
+				return "Candidate";
+
+			  if(!EPI.includes("_CAN"))
+				return "Member";
+			}
+			else  return "Candidate";
+		  }
+		  else if(agr.logical == 'Cancelled') 
+			return "Expired";
+
+		  return agr != null;
+		}
+		else {*/
+		var status = false;
+		if(pa && pa.Orgdetails && pa.Orgdetails.length > 0 && pa.Orgdetails[0].categories && pa.Orgdetails[0].categories.length > 0) {
+		  var codes = pa.Orgdetails[0].categories.filter(x => x.includes(EPI));
+		  if(codes.length == 0) 
+			status = false;
+
+		  var mebmer = codes.find(x => !x.includes("CAN") && !x.includes("Candidate")); 
+		  if(mebmer)
+			status = "Member";
+
+		  var candidate = codes.find(x => x.includes("CAN") || x.includes("Candidate")); 
+		  if(!status && candidate)
+			status = "Candidate";
+		}
+
+		if(!status && agr && agr.logical == "Active")
+		{
+		  status = "Candidate";
+		}
+
+		return status;
+		//}
+	  }
+	},
+	reference: {
+	  init: function(callback) {
+		app.reference.translation.init(function() {
+		  callback();
+		});
+	  },
+	  translation: {
+		data: {},
+		init: function(callback) {
+		  const dataSource = new kendo.data.DataSource({
+			type:"rfb-v2",
+			transport:{
+			  read:{
+				url: "https://hpe-rfb.it.hpe.com/form/data-set-provider/v2/1266/XaaSLocalizationTable/kendo/data/search",
+				type: 'POST',
+			  },
+			},
+			schema: {
+			  model: {
+				id: "EntryId",
+			  }
+			},
+			serverFiltering: true,
+			filter: {
+			  field: 'Group',
+			  operator: 'eq',
+			  value: 'ProgramStatus',
+			},
+			serverSorting: true,
+		  });
+		  dataSource.read().then(function() {
+			app.reference.translation.data = dataSource.view();
+			callback();
+		  });
+		},
+		translate: function(key) {
+		  const record = app.reference.translation.data.find(row => row.Key === key);
+		  return record !== undefined ? (record[app.context.locale] !== '' ? record[app.context.locale] : record['en_US']) : '';
+		},
+	  },
+	},
+	error: function(error) {
+	  document.querySelector('body > div.form #prompt').innerHTML = error;
+	  mo.fn.overlay.hide();
+	},
+	util: {
+	  getRedirectLink: function(link) {
+		if(app.environment != "PROD")
+		{
+		  var separator = "?";
+		  if(link.includes("?"))
+			separator = "&";
+		  return link + separator + "env=" + app.environment.toLowerCase();
+		}
+		return link;
+	  }
+	}
+  }
+
+  app.init();
+</script>
