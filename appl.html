@@ -1,0 +1,2459 @@
+<script>
+  const reference = {
+	translations: {
+	  locale: "en_US",
+	  data: {},
+	  dataArk: {},
+	  init: function () {
+		crud.read("3818", "", function (d) {
+		  let data = d.Rows || [];
+		  data.forEach(elem => {
+			reference.translations.data[elem.Key] = elem;
+		  });
+		});
+		/*crud.read("3690", "", function (d) {
+		  let data = d.Rows || [];
+		  data.forEach(elem => {
+			reference.translations.dataArk[elem.Key] = elem;
+		  });
+		});*/
+	  },
+	  get: function (key) {
+		if (reference.translations.data[key]) return reference.translations.data[key][reference.translations.locale]
+		else console.log('missing translation for key: ', key);
+	  },
+	  getArkTranslation: function (key) {
+		if (reference.translations.dataArk[key]) return reference.translations.dataArk[key][reference.translations.locale]
+		else console.log('missing translation for ark key: ', key);
+	  }
+
+	}
+  };
+  const applications = {
+	init: function () {
+	  if (!this.checkPermissions()) {
+		return _.defer(function () {
+		  router.navigate('/')
+		});
+	  };
+
+	  reference.translations.init();
+
+	  mo.init();
+
+	  $('section#applications').html('');
+	  $('section#applications').addClass('active');
+
+	  document.querySelector("#applications").innerHTML = '<div class="k-grid-toolbar toolbar btns"><button class="k-button-big" id="export-btn">Export report</button></div><div class="grid"></div>';
+	  applications.grid.init(appSettings.environment);
+	  
+	  // delete
+	  window.createReminders = applications.utils.createReminders;
+	  window.disableReminders = applications.utils.disableReminders;
+	},
+	hide: function () {
+	  $('section#applications').removeClass('active');
+	},
+	checkPermissions: function () {
+	  return user.hasAccess(permissions.apps);
+	},
+	grid: {
+	  init: function (id) {
+		$("#applications .grid").kendoGrid({
+		  dataSource: applications.grid.dataset(id),
+		  columns: applications.grid.columns(id),
+		  pageable: {
+			buttonCount: 6,
+			pageSize: 7,
+			refresh: true,
+			//pageSizes: [5, 10, 15, 20, 50, 100, 200, 1000],
+			messages: {
+			  itemsPerPage: ""
+			}
+		  },
+		  scrollable: true,
+		  sortable: true,
+		  filterable: true,
+		  groupable: false
+		});
+
+		applications.grid.events(id);
+	  },
+	  dataset: function (id) {
+		return new kendo.data.DataSource({
+		  type: "rfb-v2",
+		  transport: {
+			read: {
+			  url: "/form/data-set-provider/v2/1280/XaaS_Enrollments/kendo/data/search",
+			  type: "POST"
+			}
+		  },
+		  schema: {
+			model: {
+			  id: "EntryId",
+			  fields: {
+				SubmittedTS: {type: 'date'},
+				Created: {type: 'date'},
+				RefDate: {type: 'date'},
+			  }
+			}
+		  },
+		  serverPaging: true,
+		  pageSize: 10,
+		  serverFiltering: true,
+		  filter: applications.grid.filter(id),
+		  serverSorting: true,
+		  sort: {
+			field: "EntryId",
+			dir: "desc"
+		  }
+		});
+	  },
+	  columns: function (id) {
+		let columns = [];
+		// columns with locked attribute
+		let lockedColumns = ["EntryId", "PartyId", "BU", "Status"];
+		lockedColumns.forEach(col => {
+		  columns.push({
+			field: col,
+			title: applications.utils.getColumnLabel(col),
+			filterable: true,
+			locked: true,
+
+		  });
+		});
+
+		// add actions column
+		columns.push({
+		  field: 'Action',
+		  title: ' ',
+		  filterable: false,
+		  locked: true,
+		  template: function (row) {
+			return applications.utils.getIcon('view');
+		  }
+		});
+
+		// add rest of the columns
+		let otherColumns = ["CoE", "Created", "SubmittedTS", "CompanyEnglishName", "CountryName", "CountryRegion", "WorkEmail", "Stage", "ReferralId", "RefByEmail", "Referred_Contact_Email", "RefDistributor", "RefDate", "ArkCaseId", "TaskName", "ArkStatus", "ElapseTime", "CountryEntity", "GlobalEntity",
+			 "Agreement_SysId", "Coe_SysId", "Agreement_SysId_2", "Coe_SysId_2", "AgreementAmendment_SysId", "CoeAmendment_SysId", "AgreementAmendment_SysId_2", "CoeAmendment_SysId_2",
+			 "PendingDeals", "OtherDeals", "GrossRevenue", "ExpectedRevenueHPE", "OnboardingType", "PreferredDistributor"
+			];
+		otherColumns.forEach(col => {
+		  columns.push({
+			field: col,
+			title: applications.utils.getColumnLabel(col),
+			//filterable: true,
+			width: '200px'
+		  });
+		});
+		columns.push({
+		  field: 'ReferralType',
+		  title: 'Referral Type',
+		  filterable: true,
+		  sortable: false,
+		  width: '170px',
+		});
+
+		// set preferential width
+		columns.forEach(col => {
+		  if (col.field == 'EntryId') col.width = '60px';
+		  if (col.field == 'PartyId') col.width = '150px';
+		  if (col.field == 'BU') col.width = '100px';
+		  if (col.field == 'Status') col.width = '120px';
+		  if (col.field == 'Action') col.width = '60px';
+
+		  if (col.field == 'WorkEmail') col.width = '250px';
+		  if (col.field == 'Stage') col.width = '100px';
+
+		  if (col.field == 'OtherDeals') col.width = '230px';
+		  if (col.field == 'GrossRevenue') col.width = '230px';
+		  if (col.field == 'ExpectedRevenueHPE') col.width = '280px';
+
+		  if(col.field == "SubmittedTS") {
+			col.template = function(d) {
+			  if(!d.SubmittedTS)
+				return "";
+			  return  util.getDate((new Date(d.SubmittedTS -  (new Date()).getTimezoneOffset() * 60000 )).toISOString());
+			}
+		  }
+
+		  if(col.field == "Created")
+			col.template = function(d) {
+			  if(!d.Created)
+				return "";
+			  return util.getDate((new Date(d.Created -  (new Date()).getTimezoneOffset() * 60000 )).toISOString());
+			}
+
+			if(col.field == "RefDate")
+			  col.template = function(d) {
+				if (!d.RefDate)
+				  return "";
+				return util.getDate((new Date(d.RefDate -  (new Date()).getTimezoneOffset() * 60000 )).toISOString());
+			  }
+		});
+		return columns;
+	  },
+	  filter: function (id) {
+		let filter = {
+		  logic: 'and',
+		  filters: []
+		};
+		switch (id) {
+		  case 'prod':
+			filter.filters.push({
+			  field: 'Environment',
+			  operator: 'eq',
+			  value: 'PROD'
+			});
+			break;
+		  case 'stg':
+			filter.filters.push({
+			  field: 'Environment',
+			  operator: 'eq',
+			  value: 'STG'
+			});
+			break;
+		  case 'dev':
+			filter.filters.push({
+			  field: 'Environment',
+			  operator: 'eq',
+			  value: 'DEV'
+			});
+			break;
+		  default:
+			console.warn('Dataset filter method received an unrecognized id+' + id);
+		};
+
+		console.log('Applying filter for ' + id);
+		console.log(filter);
+
+		return filter;
+	  },
+	  events: function (id) {
+		// add event listener on action icon
+		$("#applications .grid").delegate(".icon.view", "click", async function (e) {
+		  var grid = $("#applications .grid").data("kendoGrid");
+		  var row = grid.dataItem($(this).closest("tr"));
+		  console.log("clicked data", row);
+		  console.log("grid", grid);
+
+		  mo.fn.overlay.show({loading:true})  
+
+
+
+		  await dataset.sendHttpReq(row);
+
+		  applications.components.modal(row);
+		});
+		$("#applications #export-btn").on("click", function(){
+		  var grid = $("#applications .grid").data("kendoGrid");
+		  var obj = {
+			Source: "ProgramEnrollment",
+			RequestedBy: user.email,
+			Status: 1,
+			Sort: JSON.stringify(grid.dataSource.sort()),
+			Filter: JSON.stringify(grid.dataSource.filter()),
+			Columns: JSON.stringify(grid.columns.map(({field, title}) => ({ field, title })).filter(x => x.field)),
+			FormId: 1280,
+			Dataset: 'XaaS_Enrollments',
+			Filename: 'Applications_' + (new Date().toISOString().split('T')[0])
+		  };
+
+		  crud.create("4162", obj, function(d) {
+			if (!d.EntryId) {
+			  consoe.log("Couldn't create the record");
+			  return;
+			}
+			var xhr = new XMLHttpRequest();
+			xhr.withCredentials = true;
+			xhr.addEventListener("readystatechange", function() {
+			  if (this.readyState === 4) {}
+			});
+			xhr.open("GET", "/resources/rs/custom/php/reporting/reporting.php?eid=" + d.EntryId);
+			xhr.send();
+			reportProgress.init(d.EntryId);
+		  });
+		});
+	  }
+	},
+	components: {
+	  overviewData: null,
+	  modal: function (data) {
+		applications.components.overviewData = data;
+		mo.fn.modal.show({
+		  id: 'details',
+		  title: 'Application Details',
+		  content: '<div class="applications-modal"><div  class="top"></div><div class="side"></div><div class="main"></div></div>',
+		  contentCallback: function () {
+			applications.components.init(data);
+		  },
+		  ctaCallback: function () {
+			mo.fn.events.closeAll();
+		  },
+		  ctaLabel: 'Ok',
+		  width: 900
+		});
+	  },
+	  init: function (data) {
+
+		applications.components.main(data);
+		applications.components.sidebar(data);
+		applications.components.top(data);
+
+	  },
+	  top: function (data) {
+		// logic from APP 
+			console.log('data', data);
+		const isReactivation = data.OnboardingType === 'reactivation';
+		const showBusinessPlan = data.Volume_Status === 'No';
+		const showSalesTraining = data.Sales_Criteria_Status === 'No';
+		var inMemSteps = [];
+		var storedSteps = [];
+		var steps;
+		
+		if(data.ApprovalType == 'cerebro'){
+		  	inMemSteps = ["membership", "coe", "compliance", "plan", "sales", "review", "approval"];
+		 	storedSteps = ["membership", "coe", "compliance", "review", "approval", "plan", "sales"];
+		  		
+		 steps = {
+        	membership: 'Profile Information',
+        	//coe: 'Partner Ready Progress',
+		    coe: reference.translations.get(data.CoEInternalId.split('.').pop() + data.BU + 'CoeTitle', 'Homepage') || 'Partner Ready Progress',
+        	compliance: 'Compliance',
+        	review: 'Review & Submit',
+        	plan: 'Business Plan',
+        	sales: 'Sales Training',
+        	approval: 'Approval',
+		};
+		}
+		else {
+		  	 inMemSteps = ["membership", "coe", "compliance", "plan", "sales", "review", "agreement", "approval"];
+			 storedSteps = ["membership", "coe", "compliance", "review", "agreement", "approval", "plan", "sales"];
+		  		
+		steps = {
+        	membership: 'Profile Information',
+        	//coe: 'Partner Ready Progress',
+		    coe: reference.translations.get(data.CoEInternalId.split('.').pop() + data.BU + 'CoeTitle', 'Homepage') || 'Partner Ready Progress',
+        	compliance: 'Compliance',
+        	review: 'Review & Submit',
+        	agreement: 'Agreement',
+        	plan: 'Business Plan',
+        	sales: 'Sales Training',
+        	approval: 'Approval',
+		};
+		}
+
+		const mem2Storage = inMemSteps.map(_ => storedSteps.indexOf(_));
+		const storage2Mem = storedSteps.map(_ => inMemSteps.indexOf(_));
+		const stepIndexes = Object.fromEntries(inMemSteps.map((val, index) => [val, index]));
+		const enabledSteps = [1, 1, 1, 0, 0, 1, 1, 1];
+		const remap = function (data, map) {
+		  const overview = Object.assign({}, data);
+		  if (overview.Step !== undefined) overview.Step = map[overview.Step];
+		  if (overview.Stage !== undefined) overview.Stage = map[overview.Stage];
+		  return overview;
+		}
+		if (isReactivation) {
+		  enabledSteps[stepIndexes.coe] = 0;
+		  if (showBusinessPlan) {
+            enabledSteps[stepIndexes.plan] = 1;
+          }
+          if (showSalesTraining) {
+            enabledSteps[stepIndexes.sales] = 1;
+          }
+		}
+		
+		// get new stage and step
+		const mappedData = remap(data, storage2Mem);
+		
+		//label
+		let header = document.createElement('span');
+		header.innerText = 'Enrollment Status';
+
+		//status tracker
+		let targetContainer = document.createElement('div');
+		targetContainer.setAttribute('id', 'status-tracker');
+
+		inMemSteps.forEach((step, index) => {
+		  if (enabledSteps[index]) {
+			let ul = document.createElement('ul');
+			let li = document.createElement('li');
+			let icon = document.createElement('div');
+			let label = document.createElement('span');
+
+			icon.classList.add('icon');
+			label.classList.add('label');
+
+			if (index < mappedData.Stage) {
+			  li.classList.add('completed');
+			}
+
+			if (index === 0) {
+			  li.classList.add('first');
+			}
+
+			label.innerText = steps[step];
+
+			li.append(icon);
+			li.append(label);
+
+			ul.append(li);
+			targetContainer.append(ul);
+		  }
+		});
+
+		document.querySelector(".applications-modal .top").append(header);
+		document.querySelector(".applications-modal .top").append(targetContainer);
+	  },
+	  main: function (data) {
+		console.log('applications.components.overviewData', applications.components.overviewData);
+		var tabs = [];
+		let idx = 0;
+		if (applications.components.overviewData.Status === 'Submitted') {
+		  tabs.push({
+			label: "Pizza Tracker",
+			id: "pizzaTracker"
+		  });
+		  idx = 1;
+		}
+		tabs.push({
+		  label: "Company",
+		  id: "company"
+		},
+				  {
+		  label: "Contact",
+		  id: "contact"
+		});
+		
+		if (applications.components.overviewData.OnboardingType !== 'reactivation') {
+		  tabs.push({
+			label: "CoE",
+			id: "coe"
+		  });
+		}
+		
+		tabs.push({
+		  label: "Compliance",
+		  id: "compliance"
+		});
+		
+		tabs.push({
+		  label: "Approval",
+		  id: "Approval"
+		});
+		
+		if (applications.components.overviewData.OnboardingType === 'reactivation' && applications.components.overviewData.Volume_Status === 'No') {
+		  tabs.push({
+			label: "Business plan",
+			id: "businessPlan"
+		  });
+		};	
+		if (applications.components.overviewData.OnboardingType === 'reactivation' && applications.components.overviewData.Sales_Criteria_Status === 'No') {
+		  tabs.push({
+			label: "Sales Training",
+			id: "salesTraining"
+		  });
+		};
+		
+		if(applications.components.overviewData.ApprovalType != 'cerebro'){
+		tabs.push({
+		  label: "Agreement",
+		  id: "agreement"
+		});
+		}
+		
+		if(!user.hasAccess(permissions.compliance)) {
+		  tabs = tabs.filter(t => t.id !== "compliance");
+		}
+		hpe.ui.tabs({
+		  dom: document.querySelector(".applications-modal .main"),
+		  tabs: tabs,
+		}, function (nodes) {
+		  if (applications.components.overviewData.Status === 'Submitted') {
+			applications.components.pizzaInformation(nodes[0]);
+		  }
+		  //arr.forEach( node => {});
+		  crud.read('4175', `ofk=${data.EntryId}`, function (d) {
+			crud.read('4720', `pid=${data.PartyId}&env=${data.Environment}`, function (sharedInfo) {
+			  if (d.Total) {
+				applications.components.companyInformation(nodes[idx], d, sharedInfo);
+				applications.components.contactInformation(nodes[idx + 1], d);
+			  } else {
+				document.querySelector('.applications-modal div[tab-id=contact]').innerHTML = '<span>No data available at the moment. </span>'
+				document.querySelector('.applications-modal div[tab-id=company]').innerHTML = '<span>No data available at the moment. </span>'
+			  }
+			  idx += 2;
+			  
+			  if (data.OnboardingType !== 'reactivation') {
+				if (data.CoEInternalId) {
+				  applications.components.coeInformation(nodes[idx], data);
+				} else {
+				  document.querySelector('.applications-modal div[tab-id=coe]').innerHTML = '<span>No data available at the moment.</span>';
+				}
+				idx += 1;
+			  } 
+			  
+			  if (user.hasAccess(permissions.compliance)) {
+				if (data.ArkConfigId) {
+				  applications.components.complianceInformation(nodes[idx], data);
+				} else {
+				  document.querySelector('.applications-modal div[tab-id=compliance]').innerHTML = '<span>No data available at the moment.</span>';
+				}
+				idx += 1;
+			  }
+				
+			  if (data.OnboardingType === 'reactivation' && data.Volume_Status === 'No') {
+				applications.components.businessPlan(nodes[idx], data);
+				idx += 1;
+			  }
+			  if (data.OnboardingType === 'reactivation' && data.Sales_Criteria_Status === 'No') {
+				applications.components.salesTraining(nodes[idx], data); 
+				idx += 1;
+			  }
+			  /*
+			 if (data.user.Role === 'L1 Approver' ||  data.user.Role === 'L2 Approver') {
+				applications.components.approvalInformation(nodes[idx], data);
+				nbsf.init();
+				idx += 1;
+			  }
+			  */
+			idx += 1;
+			  if ((data.Coe_SysId != null || data.AgreementAmendment_SysId != null || data.CoeAmendment_SysId != null) && data.ApprovalType != 'cerebro') {
+				applications.components.agreementInformation(nodes[idx], data);
+			  } else {
+				document.querySelector('.applications-modal div[tab-id=agreement]').innerHTML = '<span>No data available at the moment.</span>';
+			  }
+
+			})
+
+		  });
+		});
+
+	  },
+	  pizzaInformation: function(node) {
+		mo.fn.containerOverlay.show({
+		  container: node,
+		  loading: true,
+		  shadow: false,
+		});
+
+		pizza.agrType = "main";
+		pizza.coeType = "main";
+		pizza.init({
+		  application: applications.components.overviewData.EntryId,
+		  agreement: null,
+		  peer: null,
+		  referral: null,
+		  locale: 'en_US',
+		  node: node,
+		  enviroment: applications.components.overviewData.Environment,
+		}, function() {
+		  mo.fn.containerOverlay.hide(node);
+		});
+	  },
+	  contactInformation: function(node, data) {
+		let d = data.Rows[0]
+		// const header = document.createElement('h3');
+		//header.innerHTML = "Contact Information";
+
+		let personDetails = [
+		  {
+			field: "Full Name",
+			value: `${d.Salutation ? d.Salutation : ''} ${d.FirstName ? d.FirstName : ''} ${d.LastName ? d.LastName : ''}`
+		  },
+		  {
+			field: "Email",
+			value: d.WorkEmail ? d.WorkEmail : 'N/A'
+		  },
+		  {
+			field: "Job Title",
+			value: d.JobTitle ? d.JobTitle : 'N/A'
+		  },
+		  {
+			field: "Phone Number",
+			value: d.Phone ? d.Phone : 'N/A'
+		  },
+		  {
+			field: "Language",
+			value: d.PreferredLanguage ? d.PreferredLanguage : 'N/A'
+		  },
+		  {
+			field: "Contact Via Email",
+			value: d.ContactViaEmail ? d.ContactViaEmail : 'N/A'
+		  },
+		  {
+			field: "Contact Via Phone",
+			value: d.ContactViaPhone ? d.ContactViaPhone : 'N/A'
+		  }
+		]
+
+		let addressDetails = [
+		  {
+			field: "Country",
+			value: applications.components.overviewData.CountryName || d.Country || 'N/A'
+		  },
+		  {
+			field: "State/Province",
+			value: d.State ? d.State : 'N/A'
+		  },
+		  {
+			field: "Postal Code",
+			value: d.PostalCode ? d.PostalCode : 'N/A'
+		  },
+		  {
+			field: "Address",
+			value: d.Address ? d.Address : 'N/A'
+		  },
+		  {
+			field: "Address 2",
+			value: d.Address2 ? d.Address2 : 'N/A'
+		  }
+		]
+
+		let datasets = [
+		  {
+			label: 'Person',
+			data: personDetails
+		  },
+		  {
+			label: 'Address',
+			data: addressDetails
+		  }];
+		datasets.forEach(dataset => {
+		  const section = document.createElement('div');
+		  const sectionTitle = document.createElement('h5');
+		  const sectionContent = document.createElement('div');
+
+		  sectionTitle.innerHTML = dataset.label + ":";
+
+		  section.classList.add('section');
+		  sectionTitle.classList.add('section-title');
+		  sectionContent.classList.add('section-content');
+
+		  dataset.data.forEach(x => {
+			let tile = '<div class="content-tile">';
+			tile += `<span class="label">${x.field}</span>`;
+			tile += `<span class="value">${x.value}</span>`;
+			tile += '</div>';
+
+			sectionContent.innerHTML += tile;
+		  })
+
+		  section.append(sectionTitle);
+		  section.append(sectionContent);
+
+		  node.append(section);
+		})
+
+		// node.prepend(header);
+	  },
+	  companyInformation: function(node, data, sharedInfo) {
+		let d = data.Rows[0]
+
+		var shared = null;
+		var fileName = null;
+		if(sharedInfo && sharedInfo.Rows.length > 0)
+		{
+		  shared = sharedInfo.Rows[0];
+		  if(shared.LegalDocuments && shared.LegalDocuments.length > 0) {
+			if(shared.LegalDocuments.length <= 35)
+			  fileName = shared.LegalDocuments;
+			else fileName = shared.LegalDocuments.substring(0, 35) + "...";
+		  }
+		}
+
+
+		let overview = [
+		  {
+			field: "Trade Name",
+			value: d.CompanyTradeName ? d.CompanyTradeName : 'N/A'
+		  },
+		  {
+			field: "Legal Name",
+			value: d.CompanyLegalName ? d.CompanyLegalName : 'N/A'
+		  },
+		  {
+			field: "English Name",
+			value: d.CompanyEnglishName ? d.CompanyEnglishName : 'N/A'
+		  },
+		  {
+			field: "Tax ID",
+			value: d.CompanyTaxId ? d.CompanyTaxId : 'N/A'
+		  },
+		  {
+			field: "Domain",
+			value: d.CompanyDomain ? d.CompanyDomain : 'N/A'
+		  },
+		  {
+			field: "Website",
+			value: d.CompanyWebsite ? d.CompanyWebsite : 'N/A'
+		  },
+		  {
+			field: "Legal Document",
+			value: (shared && shared.LegalDocuments) ? ('<div class="legal-docs-name"><a href="https://hpe-rfb.it.hpe.com/form/1459/attachments/' + shared.EntryId + '/LegalDocuments' + '?' + shared.LegalDocuments + '"/>' + fileName + '</a></div>') : 'N/A'
+		  },
+		  {
+			field: "Agreed to Term of Use",
+			value: d.TermsOfUse ? d.TermsOfUse : 'N/A'
+		  }
+		];
+
+		let legalAddress = [
+		  {
+			field: "Country",
+			value: applications.components.overviewData.CompanyLegalCountry || d.CompanylegalCountry || 'N/A'
+		  },
+		  {
+			field: "City",
+			value: d.CompanylegalCity ? d.CompanylegalCity : 'N/A'
+		  },
+		  {
+			field: "State",
+			value: d.CompanylegalState ? d.CompanylegalState : 'N/A'
+		  },
+		  {
+			field: "Postal Code",
+			value: d.CompanylegalPostalCode ? d.CompanylegalPostalCode : 'N/A'
+		  },
+		  {
+			field: "Address",
+			value: d.CompanylegalAddress ? d.CompanylegalAddress : 'N/A'
+		  },
+		  {
+			field: "Address 2",
+			value: d.CompanylegalAddress2 ? d.CompanylegalAddress2 : 'N/A'
+		  }
+		]
+		let physAdress = [
+		  {
+			field: "Country",
+			value: applications.components.overviewData.CompanyPhysCountry || d.CompanyPhysCountry || 'N/A'
+		  },
+		  {
+			field: "City",
+			value: d.CompanyPhysCity ? d.CompanyPhysCity : 'N/A'
+		  },
+		  {
+			field: "State",
+			value: d.CompanyPhysState ? d.CompanyPhysState : 'N/A'
+		  },
+		  {
+			field: "Postal Code",
+			value: d.CompanyPhysPostalCode ? d.CompanyPhysPostalCode : 'N/A'
+		  },
+		  {
+			field: "Address",
+			value: d.CompanyPhysAddress ? d.CompanyPhysAddress : 'N/A'
+		  },
+		  {
+			field: "Address 2",
+			value: d.CompanyPhysAddress2 ? d.CompanyPhysAddress2 : 'N/A'
+		  }
+		];
+
+		let datasets = [
+		  {
+			label: 'Overview',
+			data: overview
+		  },
+		  {
+			label: 'Legal Address',
+			data: legalAddress
+		  },
+		  {
+			label: 'Physical Address',
+			data: physAdress
+		  }
+		];
+
+		if (d.OwnedByParent == "Y") {
+		  let parentCompany = [
+			{
+			  field: "Type",
+			  value: d.ParentCompanyType ? d.ParentCompanyType : 'N/A'
+			},
+			{
+			  field: "Name",
+			  value: d.ParentCompanyName ? d.ParentCompanyName : 'N/A'
+			},
+			{
+			  field: "Country",
+			  value: d.ParentCompanyCountry ? d.ParentCompanyCountry : 'N/A'
+			},
+			{
+			  field: "City",
+			  value: d.ParentCompanyCity ? d.ParentCompanyCity : 'N/A'
+			},
+			{
+			  field: "State",
+			  value: d.ParentCompanyState ? d.ParentCompanyState : 'N/A'
+			}];
+
+		  datasets.push({label: 'Parent Company', data: parentCompany});
+		}
+
+		datasets.forEach(dataset => {
+		  const section = document.createElement('div');
+		  const sectionTitle = document.createElement('h5');
+		  const sectionContent = document.createElement('div');
+
+		  sectionTitle.innerHTML = dataset.label + ":";
+
+		  section.classList.add('section');
+		  sectionTitle.classList.add('section-title');
+		  sectionContent.classList.add('section-content');
+
+		  dataset.data.forEach(x => {
+			let tile = '<div class="content-tile">';
+			tile += `<span class="label">${x.field}</span>`;
+			tile += `<span class="value">${x.value}</span>`;
+			tile += '</div>';
+
+			sectionContent.innerHTML += tile;
+		  })
+
+		  section.append(sectionTitle);
+		  section.append(sectionContent);
+
+		  node.append(section);
+		})
+
+		// node.prepend(header);=
+	  },
+	  businessPlan: function(node, data) {
+		node.innerHTML = '<div class="businessPlan form"></div>';
+		
+		const bpForm = {
+		  dom: document.querySelector('div[tab-id=businessPlan] .form'),
+		  pages: [{
+			nav: false,
+			structure: [
+			  {
+				header: "",
+				description: "Revenue Threshold",
+				group: [
+				[
+				  {
+					label: "Business Partner country threshold",
+					data: "Threshold",
+					required: false,
+					disabled: true,
+					type: "text",
+					validation: ["kpDefault"],
+					typing: "kpDefault"
+				  },
+				  {
+					label: "Expected net revenue with HPE in next 12 months",
+					data: "Revenue",
+					required: false,
+					disabled: true,
+					type: "text",
+					validation: ["kpDefault"],
+					typing: "kpDefault"
+				  },
+				  // upcoming projects
+				]
+			  ]
+			},
+			  {
+				description: "Upcoming projects",
+				repeatable: "Projects",
+				repeatableLimit: 10,
+				group: [
+				  [
+					{
+					  label: "Customer",
+					  data: "Customer",
+					  required: false,
+					  disabled: true,
+					  type: "text",
+					  validation: ["kpDefault"],
+					  typing: "kpDefault"
+					},
+					{
+					  label: "Products",
+					  data: "Products",
+					  required: false,
+					  disabled: true,
+					  type: "text",
+					  validation: ["kpDefault"],
+					  typing: "kpDefault"
+					},
+					{
+					  label: "Size",
+					  data: "Size",
+					  required: false,
+					  disabled: true,
+					  type: "text",
+					  validation: ["kpDefault"],
+					  typing: "kpDefault"
+					},
+				  ]
+				]
+			  }			
+			]
+		  }],
+		  dataset: data,
+		};
+		nbsf.init(bpForm, 0);
+			
+		if (document.querySelector('div[tab-id=businessPlan] .form .repeater'))
+		  $('div[tab-id=businessPlan] .form .repeater').hide();
+		if (document.querySelector('*[data-name="Customer"]'))
+		  document.querySelector('*[data-name="Customer"]').closest('.row').classList.add("customFilteredClass");
+	  },
+	  salesTraining: function(node, data) {
+		const datasets = [{
+			label: 'Proof of completed training',
+			data: [
+			  {
+				field: "Attachment",
+				value: (data && data.Completion) ? ('<div class="completion-name"><a href="https://hpe-rfb.it.hpe.com/form/1709/attachments/' + data.Completion_EntryId + '/Completion' + '?' +  data.Completion + '"/>' + data.Completion+ '</a></div>') : 'N/A' 
+			  }
+			]
+		  }];
+		
+		datasets.forEach(dataset => {
+		  const section = document.createElement('div');
+		  const sectionTitle = document.createElement('h5');
+		  const sectionContent = document.createElement('div');
+
+		  sectionTitle.innerHTML = dataset.label + ":";
+
+		  section.classList.add('section');
+		  sectionTitle.classList.add('section-title');
+		  sectionContent.classList.add('section-content');
+
+		  dataset.data.forEach(x => {
+			let tile = '<div class="content-tile">';
+			tile += `<span class="label">${x.field}</span>`;
+			tile += `<span class="value">${x.value}</span>`;
+			tile += '</div>';
+
+			sectionContent.innerHTML += tile;
+		  })
+
+		  section.append(sectionTitle);
+		  section.append(sectionContent);
+
+		  node.append(section);
+		});
+	  },
+	  coeInformation: function(node, data) {
+		node.innerHTML = '<div class="form"></div>'
+
+		let coeAnswersConfigs = [
+		  {
+			bu: "Aruba",
+			coe: "ss",
+			name: "Support Services",
+			read: 4176,
+			update: 4178,
+			create: 4177
+		  },
+		  {
+			bu: "Aruba",
+			coe: "cs",
+			name: "Customer success",
+			read: 4179,
+			update: 4181,
+			create: 4180
+		  },
+		  {
+			bu: "Aruba",
+			coe: "ps",
+			name: "Professional services",
+			read: 4182,
+			update: 4184,
+			create: 4183
+		  },
+		  {
+			bu: "Aruba",
+			coe: "ms",
+			name: "Managed Services",
+			read: 4185,
+			update: 4186,
+			create: 4187
+		  },
+		  {
+			bu: "Aruba",
+			coe: "sd",
+			name: "Solutions and Development",
+			read: 4188,
+			update: 4190,
+			create: 4189
+		  },
+		  {
+			bu: "Aruba",
+			coe: "tii",
+			name: "Technology Integration and Interoperability",
+			read: 4191,
+			update: 4192,
+			create: 4193
+		  },
+		  {
+			bu: "Aruba",
+			coe: "or",
+			name: "Opportunity Referral",
+			read: 4194,
+			update: 4196,
+			create: 4195
+		  },
+		  {
+			bu: "Aruba",
+			coe: "aas",
+			name: "As a Service",
+			read: 4203,
+			update: 4281,
+			create: 4362
+		  },
+		  {
+			bu: "Aruba",
+			coe: "aasGL",
+			name: "As a Service GreenLake",
+			read: 4200,
+			update: 4202,
+			create: 4201
+		  },
+		  {
+			bu: "Aruba",
+			coe: "resale",
+			name: "Resale (traditional)",
+			read: 4203,
+			update: 4204,
+			create: 4204
+		  },
+		  {
+			bu: "HIT",
+			coe: "ss",
+			name: "Support Services",
+			read: 4206,
+			update: 4208,
+			create: 4207
+		  },
+		  {
+			bu: "HIT",
+			coe: "cs",
+			name: "Customer success",
+			read: 4209,
+			update: 4211,
+			create: 4210
+		  },
+		  {
+			bu: "HIT",
+			coe: "ps",
+			name: "Professional services",
+			read: 4212,
+			update: 4213,
+			create: 4214
+		  },
+		  {
+			bu: "HIT",
+			coe: "ms",
+			name: "Managed Services",
+			read: 4215,
+			update: 4216,
+			create: 4217
+		  },
+		  {
+			bu: "HIT",
+			coe: "sd",
+			name: "Solutions and Development",
+			read: 4218,
+			update: 4220,
+			create: 4219
+		  },
+		  {
+			bu: "HIT",
+			coe: "tii",
+			name: "Technology Integration and Interoperability",
+			read: 4221,
+			update: 4223,
+			create: 4222
+		  },
+		  {
+			bu: "HIT",
+			coe: "or",
+			name: "Opportunity Referral",
+			read: 4224,
+			update: 4226,
+			create: 4225
+		  },
+		  {
+			bu: "HIT",
+			coe: "aas",
+			name: "As a Service",
+			read: 4203, //4227, ENRL-1048
+			update: 4229,
+			create: 4228
+		  },
+		  {
+			bu: "HIT",
+			coe: "aasGL",
+			name: "As a Service GreenLake",
+			read: 4230,
+			update: 4232,
+			create: 4231
+		  },
+
+		  //we use the same table as for Aruba
+		  {
+			bu: "HIT",
+			coe: "resale",
+			name: "Resale (traditional)",
+			read: 4203,
+			update: 4204,
+			create: 4204
+		  }
+		];
+
+		let coeForm = {
+		  dom: document.querySelector('div[tab-id=coe] .form')
+		};
+
+		//get nbsf config from form 1279
+		crud.read('3758', `cid=${data.CoEInternalId}`, function (d) {
+		  console.log("coe information", d.Rows[0])
+		  //replace i18n with own translate method from refrence object
+		  let formattedConfig = d.Rows[0].Config
+		  .replaceAll('i18n.get', 'reference.translations.get')
+		  .replaceAll('hpe.fn.lang', 'reference.translations.get');
+
+		  coeForm.pages = JSONfn.parse(formattedConfig)().pages;
+		  // get dataset for form
+		  let coeParts = data.CoEInternalId.split('.');
+		  let coeCode = coeParts.pop();
+		  let coeInfo = coeAnswersConfigs.find(x => x.bu == data.BU && x.coe === coeCode);
+		  crud.read(coeInfo.read, `ofk=${data.EntryId}`, function (d) {
+			//  console.log('answears settings', d);
+			coeForm.dataset = d.Rows[0];
+
+			coeForm.pages[0].callback = function () { };
+			// disable all inputs
+			applications.utils.disableAllInputsNbsf(coeForm, 0);
+			// disable submit btn
+			coeForm.pages[0].nav = false;
+			nbsf.config
+			//console.log("coeForm",coeForm)
+			//init nbsf
+			nbsf.init(coeForm, 0);
+		  })
+
+
+		})
+	  },
+	  complianceInformation: function(node, data) {
+		const buildComplience = function (d, y) {
+		  let overview = [
+			{
+			  field: "Case Id",
+			  value: data.ArkCaseId ? data.ArkCaseId : 'N/A'
+			},
+			{
+			  field: "Profile Id",
+			  value: data.EntryId ? data.EntryId : 'N/A'
+			},
+			{
+			  field: "Intake Form",
+			  value: d.Rows[0].ConfigName ? d.Rows[0].ConfigName : 'N/A'
+			},
+			{
+			  field: "Started",
+			  value: y.Rows[0].Created ? applications.utils.formatDate(y.Rows[0].Created) : 'N/A'
+			},
+			{
+			  field: "Submitted",
+			  value: y.Rows[0].SubmittedTS ? applications.utils.formatDate(y.Rows[0].SubmittedTS) : 'N/A'
+			},
+			{
+			  field: "Completed",
+			  value: y.Rows[0].CompletedTS ? applications.utils.formatDate(y.Rows[0].CompletedTS) : 'N/A'
+			},
+		  ];
+		  let status = [
+			{
+			  field: "Status",
+			  value: data.ArkStatus ? data.ArkStatus : 'N/A'
+			},
+			{
+			  field: "Task",
+			  value: data.TaskName ? data.TaskName : 'N/A'
+			},
+			{
+			  field: "Task Started",
+			  value: data.TaskStartDate ? applications.utils.formatDate(data.TaskStartDate) : 'N/A'
+			},
+			{
+			  field: "Task Completed",
+			  value: data.TaskEndDate ? applications.utils.formatDate(data.TaskEndDate) : 'N/A'
+			},
+		  ];
+		  let datasets = [
+			{
+			  label: 'Overview',
+			  data: overview
+			},
+			{
+			  label: 'Status',
+			  data: status
+			},
+		  ];
+		  
+		  datasets.forEach(dataset => {
+		  const section = document.createElement('div');
+		  const sectionTitle = document.createElement('h5');
+		  const sectionContent = document.createElement('div');
+
+		  sectionTitle.innerHTML = dataset.label + ":";
+
+		  section.classList.add('section');
+		  sectionTitle.classList.add('section-title');
+		  sectionContent.classList.add('section-content');
+
+		  dataset.data.forEach(x => {
+			let tile = '<div class="content-tile">';
+			tile += `<span class="label">${x.field}</span>`;
+			tile += `<span class="value">${x.value}</span>`;
+			tile += '</div>';
+
+			sectionContent.innerHTML += tile;
+		  })
+
+		  section.append(sectionTitle);
+		  section.append(sectionContent);
+
+		  node.append(section);
+		});
+		};
+
+		let complianceForm = {
+		  dom: document.querySelector('div[tab-id=compliance] .form')
+		};
+
+		//get nbsf config from form 1279
+		crud.read('3758', `eid=${data.ArkConfigId}`, function (d) {
+		  console.log("compliance information", d.Rows[0])
+					  
+		  crud.read('3694', `eid=${data.ArkCaseId}`, function (y) {
+			buildComplience(d, y);
+		  })
+
+		  // get config for nbsf
+		  let formattedConfig = d.Rows[0].Config
+		  complianceForm.pages = JSONfn.parse(formattedConfig).pages;
+		  console.log("PARSED CONFIG ", JSONfn.parse(formattedConfig))
+
+		  // get dataset for form
+		  /*  crud.read('3699', `inv=${data.ArkCaseId}`, function (x) {
+			console.log('compliance answears settings', x);
+			complianceForm.dataset = x.Rows[0];
+
+			complianceForm.pages[3].callback = function () { };
+			// disable all inputs
+			applications.utils.disableAllInputsNbsf(complianceForm, 3);
+			// disable submit btn
+			complianceForm.pages[3].nav = false;
+
+			console.log("complianceForm", complianceForm)
+			//update translation method inside form
+			complianceForm.reference = {
+			  languages: reference.translations.dataArk
+			};
+			complianceForm.localization = reference.translations.dataArk;
+			complianceForm.lang = reference.translations.locale;
+			complianceForm.locale = reference.translations.locale;
+			// init nbsf on ddq page (3) 
+			nbsf.init(complianceForm, 3);
+		  })*/
+		})
+	  },
+	  agreementInformation: function(node, data) {
+		console.log("agreement information loading", data);
+		node.innerHTML = '<span class="loading">Loading data...</span><div class="overlay"></div><div class="peer-agreement"></div><div class="peer-agreement-amendment"></div><div class="agreement-pdf-view"></div>'
+		// coe sys id
+		if (data.Coe_SysId != null) {	  
+		  let coeStatus = [
+			{
+			  field: "Aruba Review",
+			  value: '-'
+			},
+			{
+			  field: "Business Review",
+			  value: '-'
+			},
+			{
+			  field: "Legal Review",
+			  value: '-'
+			}
+		  ];
+
+		  let coeSignature = [
+			{
+			  field: "Signature Type",
+			  value: '-'
+			},
+			{
+			  field: "URL For Contract Document",
+			  value: '-'
+			},
+			{
+			  field: "Shipping Tracking Number ",
+			  value: '-'
+			},
+			{
+			  field: "Contract Preferred Carrier",
+			  value: '-'
+			}
+
+		  ];
+
+		  let coeReferral = [
+			{
+			  field: "Referral Id",
+			  value: '-'
+			},
+			{
+			  field: "Referral Email",
+			  value: '-'
+			}
+		  ]
+
+		  let coeTimestamps = [
+			{
+			  field: "Submitted",
+			  value: '-'
+			},
+			{
+			  field: "ReSubmitted",
+			  value: '-'
+			}
+		  ]
+
+		  let coeDatasets = [{
+			label: 'Status',
+			data: coeStatus
+		  },{
+			label: 'Signature',
+			data: coeSignature
+		  },{
+			label: 'Referral',
+			data: coeReferral
+		  },{
+			label: 'Time stamps',
+			data: coeTimestamps
+		  }];
+		  coeDatasets.forEach(dataset => {
+			const section = document.createElement('div');
+			const sectionTitle = document.createElement('h5');
+			const sectionContent = document.createElement('div');
+
+			sectionTitle.innerHTML = dataset.label + ":";
+
+			section.classList.add('section');
+			sectionTitle.classList.add('section-title');
+			sectionContent.classList.add('section-content');
+
+			dataset.data.forEach(x => {
+			  let id = x.field.split(' ').join('');
+			  let camelCaseId = id.replace(id[0], id[0].toLowerCase());
+
+			  let tile = '<div class="content-tile">';
+			  tile += `<span class="label">${x.field}</span>`;
+			  tile += `<span class="value" id=${camelCaseId}>${x.value}</span>`;
+			  tile += '</div>';
+
+			  sectionContent.innerHTML += tile;
+			})
+
+			section.append(sectionTitle);
+			section.append(sectionContent);
+
+			node.querySelector('.peer-agreement').append(section);
+		  })
+		}
+
+		/// coe peer amendement agreement sys id
+		if (data.CoeAmendment_SysId != null) {
+		  let target = node.querySelector('.peer-agreement-amendment');
+		  target.innerHTML = `<div class='header'><span class="label">Peer Agreement Amendment</span> <span class="icon">${applications.utils.getIcon('carret-down')}</span></div>`
+		  target.innerHTML += `<div class="container"></div>`
+
+		  target.querySelector('.header').addEventListener('click', function () {
+			target.querySelector('.container').classList.toggle('active');
+			if (target.querySelector('.container').classList.contains('active')) target.querySelector('.header .icon').innerHTML = applications.utils.getIcon('carret-up')
+			else target.querySelector('.header .icon').innerHTML = applications.utils.getIcon('carret-down')
+		  });
+
+
+		  let coeAmdStatus = [
+			{
+			  field: "Aruba Review",
+			  value: '-'
+			},
+			{
+			  field: "Business Review",
+			  value: '-'
+			},
+			{
+			  field: "Legal Review",
+			  value: '-'
+			}
+		  ];
+
+		  let coeAmdSignature = [
+			{
+			  field: "Signature Type",
+			  value: '-'
+			},
+			{
+			  field: "URL For Contract Document",
+			  value: '-'
+			},
+			{
+			  field: "Shipping Tracking Number ",
+			  value: '-'
+			},
+			{
+			  field: "Contract Preferred Carrier",
+			  value: '-'
+			}
+
+		  ];
+
+		  let coeAmdReferral = [
+			{
+			  field: "Referral Id",
+			  value: '-'
+			},
+			{
+			  field: "Referral Email",
+			  value: '-'
+			}
+		  ]
+
+		  let coeAmdTimestamps = [
+			{
+			  field: "Submitted",
+			  value: '-'
+			},
+			{
+			  field: "ReSubmitted",
+			  value: '-'
+			}
+		  ]
+
+		  let coeAmdDatasets = [{
+			label: 'Status',
+			data: coeAmdStatus
+		  },{
+			label: 'Signature',
+			data: coeAmdSignature
+		  },{
+			label: 'Referral',
+			data: coeAmdReferral
+		  },{
+			label: 'Time stamps',
+			data: coeAmdTimestamps
+		  }];
+		  coeAmdDatasets.forEach(dataset => {
+			const section = document.createElement('div');
+			const sectionTitle = document.createElement('h5');
+			const sectionContent = document.createElement('div');
+
+			sectionTitle.innerHTML = dataset.label + ":";
+
+			section.classList.add('section');
+			sectionTitle.classList.add('section-title');
+			sectionContent.classList.add('section-content');
+
+			dataset.data.forEach(x => {
+			  let id = x.field.split(' ').join('');
+			  let camelCaseId = id.replace(id[0], id[0].toLowerCase());
+
+			  let tile = '<div class="content-tile">';
+			  tile += `<span class="label">${x.field}</span>`;
+			  tile += `<span class="value" id=${camelCaseId}>${x.value}</span>`;
+			  tile += '</div>';
+
+			  sectionContent.innerHTML += tile;
+			})
+
+			section.append(sectionTitle);
+			section.append(sectionContent);
+
+			node.querySelector('.peer-agreement-amendment  .container').append(section);
+		  })
+		}
+
+		if (data.Agreement_SysId != null) {
+		  document.querySelector('.tabs span[tab-id=agreement]').addEventListener('click', function () {
+			let current = 0;
+			let total = 3;
+			let isComplete = function() {
+			  current++;
+			  if(current == total) {
+				// TODO HTML Update
+				if (document.querySelector('div[tab-id=agreement] .loading'))  document.querySelector('div[tab-id=agreement] .loading').remove();
+				if (document.querySelector('div[tab-id=agreement] .overlay')) document.querySelector('div[tab-id=agreement] .overlay').remove();
+
+				document.querySelector('div.peer-agreement #arubaReview').innerText = dataset.peerAgreementDataset.ICMArubaReviewStatus || 'N/A';
+				document.querySelector('div.peer-agreement #businessReview').innerText = dataset.peerAgreementDataset.ICMBusinessReviewStatuss || 'N/A';
+				document.querySelector('div.peer-agreement #legalReview').innerText = dataset.peerAgreementDataset.ICMLegalReviewStatuss || 'N/A';
+				document.querySelector('div.peer-agreement #shippingTrackingNumber').innerText = dataset.peerAgreementDataset.ICMShippingTrackingNumber || 'N/A';
+				document.querySelector('div.peer-agreement #contractPreferredCarrier').innerText = dataset.peerAgreementDataset.ICMContractPreferredCarrier || 'N/A';
+				document.querySelector('div.peer-agreement #referralId').innerText = dataset.peerAgreementDataset.ICMRIDs || 'N/A';
+				document.querySelector('div.peer-agreement #submitted').innerText = dataset.peerAgreementDataset.ICMSubmittedTimestamp || 'N/A';
+				document.querySelector('div.peer-agreement #reSubmitted').innerText = dataset.peerAgreementDataset.ICMApplicationReSubmitted || 'N/A';
+
+				document.querySelector('div.peer-agreement #uRLForContractDocument').innerText = dataset.agreementDataset.ICMURLforContractDocument || 'N/A';
+				document.querySelector('div.peer-agreement #referralEmail').innerText = dataset.agreementDataset.ICMReferralEmail || 'N/A';
+				document.querySelector('div.peer-agreement #signatureType').innerText = dataset.agreementDataset.ICMSignatureType || 'N/A';
+
+
+				if (dataset.coePeerAgreementDataset) {
+				  document.querySelector('div.peer-agreement-amendment #arubaReview').innerText = dataset.coePeerAgreementDataset.ICMArubaReviewStatus || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #businessReview').innerText = dataset.coePeerAgreementDataset.ICMBusinessReviewStatuss || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #legalReview').innerText = dataset.coePeerAgreementDataset.ICMLegalReviewStatuss || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #signatureType').innerText = dataset.coePeerAgreementDataset.ICMSignatureType || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #shippingTrackingNumber').innerText = dataset.coePeerAgreementDataset.ICMShippingTrackingNumber || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #contractPreferredCarrier').innerText = dataset.coePeerAgreementDataset.ICMContractPreferredCarrier || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #referralId').innerText = dataset.coePeerAgreementDataset.ICMRIDs || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #submitted').innerText = dataset.coePeerAgreementDataset.ICMSubmittedTimestamp || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #reSubmitted').innerText = dataset.coePeerAgreementDataset.ICMApplicationReSubmitted || 'N/A';
+
+				  document.querySelector('div.peer-agreement-amendment #uRLForContractDocument').innerText = dataset.agreementDataset.ICMURLforContractDocument || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #referralEmail').innerText = dataset.agreementDataset.ICMReferralEmail || 'N/A';
+				  document.querySelector('div.peer-agreement-amendment #signatureType').innerText = dataset.agreementDataset.ICMSignatureType || 'N/A';
+				}
+			  }
+			}
+
+
+			dataset.getPeerAgreementData(data, isComplete);
+			dataset.getCoePeerAgreementData(data, isComplete);
+			dataset.getPdfFileContent(data, isComplete);
+		  })
+		}
+	  },
+	  sidebar: function (data) {
+
+		let ul = document.createElement('ul');
+		let details; 
+		
+		if(data.ApprovalType == 'cerebro'){
+		  	 details = [
+		  {
+		  field: "App Id",
+		  value: data.EntryId ? data.EntryId : 'N/A'
+		},
+					   {
+						 field: "Referral Id",
+						 value: data.ReferralId ? data.ReferralId : 'N/A'
+					   },
+					   {
+						 field: "Party Id",
+						 value: data.PartyId ? data.PartyId : 'N/A'
+					   },
+					   {
+						 field: "Country",
+						 value: data.CountryName ? data.CountryName : 'N/A'
+					   },
+					   {
+						 field: "Global Id",
+						 value: data.GlobalEntity ? data.GlobalEntity : 'N/A'
+					   },
+					   {
+						 field: "Country Id",
+						 value: data.CountryEntity ? data.CountryEntity : 'N/A'
+					   },
+			   
+			   /*
+					   {
+						 field: "Agreement",
+						 value: data.Agreement_SysId ? data.Agreement_SysId : 'N/A'
+					   },
+					   {
+						 field: "Peer Agreement",
+						 value: data.Coe_SysId ? data.Coe_SysId : 'N/A'
+					   },
+					   {
+						 field: "Agreement Amendment",
+						 value: data.AgreementAmendment_SysId ? data.AgreementAmendment_SysId : 'N/A'
+					   },
+					   {
+						 field: "Peer Amendment",
+						 value: data.CoeAmendment_SysId ? data.CoeAmendment_SysId : 'N/A'
+					   },
+					   {
+						 field: "Signature Type",
+						 value: data.Agreement_SysId ? '-' : 'N/A'
+					   },
+					   {
+						 field: "Contract Id",
+						 value: data.Agreement_SysId ? '-' : 'N/A'
+					   },
+					   {
+						 field: "Business Relationship Code",
+						 value: data.Agreement_SysId ? '-' : 'N/A'
+					   },
+					   */
+					   {
+						 field: "Submitted",
+						 value: data.SubmittedTS ? applications.utils.formatDate(new Date(data.SubmittedTS).toISOString()) : 'N/A'
+					   }
+					  ]; 
+		}
+		else{
+		 details = [
+		  {
+		  field: "App Id",
+		  value: data.EntryId ? data.EntryId : 'N/A'
+		},
+					   {
+						 field: "Referral Id",
+						 value: data.ReferralId ? data.ReferralId : 'N/A'
+					   },
+					   {
+						 field: "Party Id",
+						 value: data.PartyId ? data.PartyId : 'N/A'
+					   },
+					   {
+						 field: "Country",
+						 value: data.CountryName ? data.CountryName : 'N/A'
+					   },
+					   {
+						 field: "Global Id",
+						 value: data.GlobalEntity ? data.GlobalEntity : 'N/A'
+					   },
+					   {
+						 field: "Country Id",
+						 value: data.CountryEntity ? data.CountryEntity : 'N/A'
+					   },
+					   {
+						 field: "Agreement",
+						 value: data.Agreement_SysId ? data.Agreement_SysId : 'N/A'
+					   },
+					   {
+						 field: "Peer Agreement",
+						 value: data.Coe_SysId ? data.Coe_SysId : 'N/A'
+					   },
+					   {
+						 field: "Agreement Amendment",
+						 value: data.AgreementAmendment_SysId ? data.AgreementAmendment_SysId : 'N/A'
+					   },
+					   {
+						 field: "Peer Amendment",
+						 value: data.CoeAmendment_SysId ? data.CoeAmendment_SysId : 'N/A'
+					   },
+					   {
+						 field: "Signature Type",
+						 value: data.Agreement_SysId ? '-' : 'N/A'
+					   },
+					   {
+						 field: "Contract Id",
+						 value: data.Agreement_SysId ? '-' : 'N/A'
+					   },
+					   {
+						 field: "Business Relationship Code",
+						 value: data.Agreement_SysId ? '-' : 'N/A'
+					   },
+					   {
+						 field: "Submitted",
+						 value: data.SubmittedTS ? applications.utils.formatDate(new Date(data.SubmittedTS).toISOString()) : 'N/A'
+					   }
+					  ]; 
+		}
+		details.forEach(el => {
+		  let id = el.field.split(' ').join('');
+		  let camelCaseId = id.replace(id[0], id[0].toLowerCase());
+
+		  let li = document.createElement('li');
+		  let field = document.createElement('span');
+		  field.classList.add('field-label');
+		  let value = document.createElement('span');
+		  value.classList.add('value-label');
+		  value.setAttribute('id', camelCaseId)
+
+		  field.innerText = el.field;
+		  value.innerText = el.value;
+
+		  li.append(field);
+		  li.append(value);
+
+		  ul.append(li);
+		});
+
+		document.querySelector('.applications-modal .side').append(ul);
+	  }
+	},
+	utils: {
+	  createReminders: function (data, cb, errorCb) {
+		// data: TO, RequestId
+		const currentDate = new Date();
+		const dates = [
+		  new Date(new Date().setDate(currentDate.getDate() + 2)),
+		  new Date(new Date().setDate(currentDate.getDate() + 4)),
+		  new Date(new Date().setDate(currentDate.getDate() + 6))
+		];
+		const reminders = dates.map(date => {
+		  const reminder = {
+			RequestId: data.RequestId,
+			To: data.To || "alesya.bondar@clevercraft.net", 
+			CC: "alesya.bondar@clevercraft.net",
+			BCC: "alesya.bondar@clevercraft.net",
+			Status: 0, // 1 - Send, 2 - Declined
+			Subject: "Reminder: L2 Approval - ECOM",
+			Body: "<div>Reminder</div>",
+			Date: date.toISOString(),
+		  };
+		  return reminder;
+		});
+		const promises = reminders.map(reminder => {
+		  return new Promise((resolve, reject) => {
+			crud.create("5692", reminder, function(d) {
+			  resolve(d);
+			});
+		  });
+		});
+		Promise.all(promises).then((results) => {
+		  console.log(results);
+		  if (cb) {
+			cb();
+		  }
+		}).catch((error) => {
+		  elog('Failed to create reminder');
+		  if (errorCb) {
+			errorCb();
+		  }
+		});
+	  },
+	  disableReminders: function(data, cb) {
+		// data: RequestId
+		const reminders = new kendo.data.DataSource({
+		  type: "rfb-v2",
+		  transport: {
+			read: {
+			  url: "/form/data-set-provider/v2/1780/ApprovalReminders/kendo/data/search",
+			  type: 'POST'
+			},
+		  },
+		  schema: {
+			model: {
+			  id: "EntryId",
+			  fields: {
+			  }
+			}
+		  },
+		  serverFiltering: true,
+
+		  filter: {
+			logic: 'and',
+			filters: [
+			  {
+				field: 'RequestId',
+				operator: 'eq',
+				value: data.RequestId
+			  },
+			  {
+				field: 'Status',
+				operator: 'eq',
+				value: 0
+			  },
+			]
+		  },
+		  serverPaging: true,
+		  pageSize: 1000,
+		  serverSorting: true,
+		});
+		reminders.read().then(function() {
+		  const view = reminders.view();
+		  console.log(view);
+		  view.forEach(item => {
+			crud.update(5695, item.EntryId, { Status: 2 }, function() {});
+		  });
+		  if (cb) {
+			cb();
+		  }
+		});
+	  },
+	  getColumnLabel: function (column) {
+		let reference = {
+		  EntryId: "ID",
+		  PartyId: "Party Id",
+		  BU: "BU",
+		  CoE: "CoE",
+		  Status: "Status",
+		  CompanyEnglishName: "Company",
+		  CountryName: "Country",
+		  WorkEmail: "Email",
+		  Stage: "Step",
+		  Created: "Created",
+		  SubmittedTS: "Submitted",
+		  ReferralId: "Referral App",
+		  ArkCaseId: "ARK Case",
+		  CountryEntity: "Country Entity",
+		  GlobalEntity: "Global Entity",
+		  Agreement_SysId: "Agreement",
+		  Coe_SysId: "Peer Agreeement",
+		  Agreement_SysId_2: "Agreement 2",
+		  Coe_SysId_2: "Peer Agreeement 2",
+		  AgreementAmendment_SysId: "Agreement Amendment",
+		  CoeAmendment_SysId: "Peer Agreement Amendment",
+		  AgreementAmendment_SysId_2: "Agreement Amendment 2",
+		  CoeAmendment_SysId_2: "Peer Agreement Amendment 2",
+		  CountryRegion: "Region",
+		  RefByEmail: "Ref. By Email",
+		  Referred_Contact_Email: "Ref. Email",
+		  RefDistributor: "Ref. Distributor",
+		  RefDate: "Ref. Date",
+		  TaskName: "ARK Task Name",
+		  ArkStatus: "L&R Status in Ark",
+		  PendingDeals: "Pending Deal",
+		  OtherDeals: "Pending Deal Amount",
+		  GrossRevenue: "Annual Gross Revenue",
+		  ExpectedRevenueHPE: "Expected Revenue Required",
+		  OnboardingType: "Onboarding Type",
+		  PreferredDistributor: "Preferred Distributor Name",
+		};
+		if (typeof (reference[column]) === 'undefined')
+		  return column;
+		return reference[column];
+	  },
+	  getIcon: function (name) {
+		let icon = name;
+		switch (name.toLowerCase()) {
+		  case 'view':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="view" width="24px" height="24px">' +
+			  '<path fill="none" stroke="#666" stroke-width="2" d="M12,21 C7,21 1,16 1,12 C1,8 7,3 12,3 C17,3 23,8 23,12 C23,16 17,21 12,21 Z M12,7 C9.23875,7 7,9.23875 7,12 C7,14.76125 9.23875,17 12,17 C14.76125,17 17,14.76125 17,12 C17,9.23875 14.76125,7 12,7 L12,7 Z">' +
+			  '</path>' +
+			  '</svg>';
+			break;
+		  case 'edit':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="edit" width="24px" height="24px"><path fill="none" stroke="#666" stroke-width="2" d="M14,4 L20,10 L14,4 Z M22.2942268,5.29422684 C22.6840146,5.68401459 22.6812861,6.3187139 22.2864907,6.71350932 L9,20 L2,22 L4,15 L17.2864907,1.71350932 C17.680551,1.319449 18.3127724,1.31277239 18.7057732,1.70577316 L22.2942268,5.29422684 Z M3,19 L5,21 M7,17 L15,9"></path></svg>'
+			break;
+		  case 'refresh':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="form-refresh" width="30px" height="30px"><path fill="none" stroke="#01a982" stroke-width="1" d="M17.3333333,9.33333333 C16.3982691,7.36020781 14.3579813,6 12,6 C8.6862915,6 6,8.6862915 6,12 C6,15.3137085 8.6862915,18 12,18 C15.3137085,18 18,15.3137085 18,12 M18.5,6 L18.5,10 L14.5,10"></path></svg>'
+			break;
+		  case 'carret-up':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="form-up" width="24px" height="24px"><polyline fill="none" stroke="#666" stroke-width="2" points="18 9 12 15 6 9" transform="matrix(1 0 0 -1 0 24)"></polyline></svg>'
+			break;
+		  case 'bug':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="bug" width="20px" height="20px"><path fill="none" stroke="#666" stroke-width="2" d="M23,20 C21.62,17.91 20,17 19,17 M5,17 C4,17 2.38,17.91 1,20 M19,9 C22,9 23,6 23,6 M1,6 C1,6 2,9 5,9 M19,13 L24,13 L19,13 Z M5,13 L0,13 L5,13 Z M12,23 L12,12 L12,23 L12,23 Z M12,23 C8,22.9999998 5,20.0000002 5,16 L5,9 C5,9 8,6.988 12,7 C16,7.012 19,9 19,9 C19,9 19,11.9999998 19,16 C19,20.0000002 16,23.0000002 12,23 L12,23 Z M7,8 L7,6 C7,3.24 9.24,1 12,1 C14.76,1 17,3.24 17,6 L17,8"></path></svg>'
+			break;
+		  case 'carret-down':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="form-down" width="24px" height="24px"><polyline fill="none" stroke="#666" stroke-width="2" points="18 9 12 15 6 9"></polyline></svg>'
+			break;
+		  case 'search':
+			icon = '<svg version="1.1" viewBox="0 0 24 24" role="img" aria-label="form-search" width="30px" height="30px"><path fill="none" stroke="#666" stroke-width="2" d="M13.8,13.8 L18,18 L13.8,13.8 Z M10.5,15 C12.9852814,15 15,12.9852814 15,10.5 C15,8.01471863 12.9852814,6 10.5,6 C8.01471863,6 6,8.01471863 6,10.5 C6,12.9852814 8.01471863,15 10.5,15 Z"></path></svg>'
+			break;
+		  default:
+			console.warn('No icon identified with given name ' + name);
+		}
+		return '<span class="icon ' + name.toLowerCase() + '">' + icon + '</span>';
+	  },
+	  formatDate: function (date) {
+		if (date != null) {
+		  let formatedDate = date.split('T')[0];
+		  let h = date.split('T')[1].split(':')[0];
+		  let m = date.split('T')[1].split(':')[1];
+		  let s = Math.round(date.split('T')[1].split(':')[2]);
+		  let timeOfDay = [h, m, s].join(':');
+
+		  return `${formatedDate} ${timeOfDay}`
+		} else {
+		  return 'N/A'
+		}
+
+	  },
+	  disableAllInputsNbsf: function (form, page) {
+
+		let inputGroups = form.pages[page].structure;
+		for (let i = 0; i < inputGroups.length; i++)
+		  for (let j = 0; j < inputGroups[i].group.length; j++)
+			for (let k = 0; k < inputGroups[i].group[j].length; k++)
+			  inputGroups[i].group[j][k].disabled = true;
+
+		/*
+						let inputGroups = form.pages[0].structure;
+						console.log('inputGroups', inputGroups)
+						inputGroups.forEach(inputGroup => {
+						  console.log('inputGroup',inputGroup)
+						  inputGroup.group[0].forEach( input => input.disabled = true)
+						})    */
+	  }
+	}
+  }
+
+  const dataset = {
+	agreementDataset: {},
+	peerAgreementDataset: {},
+	coePeerAgreementDataset: {},
+	agreementPdfFileContent: '',
+	getAgreementData: function (data) {
+	  if (data.Agreement_SysId != null) {
+		let xhr = new XMLHttpRequest();
+		xhr.withCredentials = true;
+
+		xhr.addEventListener("readystatechange", function () {
+		  if (this.readyState === 4) {
+			dataset.agreementDataset = JSON.parse(this.responseText).Response.Data;
+
+			document.querySelector('div.side #signatureType').innerText = dataset.agreementDataset.ICMSignatureType  || 'N/A';
+			document.querySelector('div.side #contractId').innerText = dataset.agreementDataset.ICMAgreementCode || 'N/A';
+			document.querySelector('div.side #businessRelationshipCode').innerText = dataset.agreementDataset.ICMBusinessRelationshipCode.DisplayValue + " (" + dataset.agreementDataset.ICMAgreementType.DisplayValue + ")";
+		  }
+
+		});
+		if (data.Environment == "DEV") xhr.open("POST", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/dev/icertis/v2/direct/agreement.php?uuid=" + data.Agreement_SysId);
+		if (data.Environment == "STG") xhr.open("POST", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/dogfood/icertis/v2/direct/agreement.php?uuid=" + data.Agreement_SysId);
+		if (data.Environment == "PROD") xhr.open("POST", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/icertis/v2/direct/agreement.php?uuid=" + data.Agreement_SysId);
+		xhr.send();
+	  }
+	},
+	getPeerAgreementData: function (data, cb) {
+	  if (data.Coe_SysId != null) {
+		let xhr = new XMLHttpRequest();
+		xhr.withCredentials = true;
+
+		xhr.addEventListener("readystatechange", function () {
+		  if (this.readyState === 4) {
+			dataset.peerAgreementDataset = JSON.parse(this.responseText).Response.Data
+			cb();
+			/* 
+
+						console.log(dataset);
+					  document.querySelector('div.peer-agreement #arubaReview').innerText = dataset.peerAgreementDataset.ICMArubaReviewStatus || 'N/A';
+					  document.querySelector('div.peer-agreement #businessReview').innerText = dataset.peerAgreementDataset.ICMBusinessReviewStatuss || 'N/A';
+					  document.querySelector('div.peer-agreement #legalReview').innerText = dataset.peerAgreementDataset.ICMLegalReviewStatuss || 'N/A';
+					  document.querySelector('div.peer-agreement #signatureType').innerText = dataset.peerAgreementDataset.ICMSignatureType || 'N/A';
+					  document.querySelector('div.peer-agreement #shippingTrackingNumber').innerText = dataset.peerAgreementDataset.ICMShippingTrackingNumber || 'N/A';
+					  document.querySelector('div.peer-agreement #contractPreferredCarrier').innerText = dataset.peerAgreementDataset.ICMContractPreferredCarrier || 'N/A';
+					  document.querySelector('div.peer-agreement #referralId').innerText = dataset.peerAgreementDataset.ICMRIDs || 'N/A';
+					  document.querySelector('div.peer-agreement #submitted').innerText = dataset.peerAgreementDataset.ICMSubmittedTimestamp || 'N/A';
+					  document.querySelector('div.peer-agreement #reSubmitted').innerText = dataset.peerAgreementDataset.ICMApplicationReSubmitted || 'N/A';
+					*/
+		  }
+		});
+		if (data.Environment == "DEV") xhr.open("GET", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/dev/icertis/v2/direct/peer_agreement.php?uuid=" + data.Coe_SysId);
+		if (data.Environment == "STG") xhr.open("GET", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/dogfood/icertis/v2/direct/peer_agreement.php?uuid=" + data.Coe_SysId);
+		if (data.Environment == "PROD") xhr.open("GET", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/icertis/v2/direct/peer_agreement.php?uuid=" + data.Coe_SysId);
+		xhr.send();
+	  }
+	},
+	getCoePeerAgreementData: function (data, cb) {
+	  if (data.CoeAmendment_SysId != null) {
+		let xhr = new XMLHttpRequest();
+		xhr.withCredentials = true;
+
+		xhr.addEventListener("readystatechange", function () {
+		  if (this.readyState === 4) {
+			dataset.coePeerAgreementDataset = JSON.parse(this.responseText).Response.Data;
+			cb();
+
+			if (JSON.parse(this.responseText).Response.Messages != null) {
+			  document.querySelector('div.peer-agreement-amendment .container').innerHTML = `<div class="section">${JSON.parse(this.responseText).Response.Messages[0].Message}<div>`
+			  return
+			} else if (JSON.parse(this.responseText).Response.message != null) {
+			  document.querySelector('div.peer-agreement-amendment .container').innerHTML = `<div class="section">${JSON.parse(this.responseText).Response.message}<div>`
+			  return
+			}
+
+
+		  }
+		});
+		if (data.Environment == "DEV") xhr.open("GET", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/dev/icertis/v2/direct/amendment.php?uuid=" + data.CoeAmendment_SysId + "&type=coe");
+		if (data.Environment == "STG") xhr.open("GET", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/dogfood/icertis/v2/direct/amendment_fetch.php?uuid=" + data.CoeAmendment_SysId + "&type=coe");
+		if (data.Environment == "PROD") xhr.open("GET", "https://hpe-rfb.itcs.hpe.com/resources/rs/custom/php/xaas/icertis/v2/direct/amendment_fetch.php?uuid=" + data.CoeAmendment_SysId + "&type=coe");
+		xhr.send();
+	  }
+	},
+	getPdfFileContent: function(data, cb) {
+	  if (data.Agreement_SysId != null) {
+		let xhr = new XMLHttpRequest();
+		xhr.withCredentials = true;
+
+		xhr.addEventListener("readystatechange", function () {
+		  if (this.readyState === 4) {
+			console.log("Agreement pdf", JSON.parse(this.responseText));
+			cb();
+			let target = document.querySelector('div[tab-id=agreement] .agreement-pdf-view');
+			target.innerHTML = `<div class='header'><span class="label">Agreement Amendment PDF</span></div>`;
+
+			if (JSON.parse(this.responseText).Response.Messages != null) {
+			  target.innerHTML += `<div class="section">${JSON.parse(this.responseText).Response.Messages[0].Message}<div>`
+			  return
+			} else if (JSON.parse(this.responseText).Response.message != null) {
+			  target.innerHTML += `<div class="section">${JSON.parse(this.responseText).Response.message}<div>`
+			  return
+			}
+
+
+			let b64 = JSON.parse(this.responseText).Response.Data.FileContent;
+			let obj = document.createElement('object');
+			obj.setAttribute('data', `data:application/pdf;base64,${b64}`);
+			obj.setAttribute('type', `application/pdf`);
+			obj.setAttribute('width', `100%`);
+			obj.setAttribute('height', `100%`);
+
+			target.append(obj);
+
+
+		  }
+		});
+		if (data.Environment == "DEV") xhr.open("POST", "https://hpe-rfb.it.hpe.com/resources/rs/custom/php/xaas/dev/icertis/v2/direct/agreement_download.php?uuid=" + data.Agreement_SysId);
+		if (data.Environment == "STG") xhr.open("POST", "https://hpe-rfb.it.hpe.com/resources/rs/custom/php/xaas/dogfood/icertis/v2/direct/agreement_download.php?uuid=" + data.Agreement_SysId);
+		if (data.Environment == "PROD") xhr.open("POST", "https://hpe-rfb.it.hpe.com/resources/rs/custom/php/xaas/icertis/v2/direct/agreement_download.php?uuid=" + data.Agreement_SysId);
+
+		let body = {
+		  "Data": {
+			"FileType": "Pdf",
+			"Version": 1
+		  }
+		};
+		xhr.send(JSON.stringify(body))
+	  }
+	},
+	sendHttpReq: function(data){
+	  this.getAgreementData(data);
+	}
+  }
+  const reportProgress = {
+	reportData: {},
+	init: function(id) {
+	  mo.fn.overlay.show({
+		loading: true,
+		close: false
+	  });
+	  reportProgress.getData(id, function() {
+		mo.fn.overlay.hide();
+		reportProgress.ui();
+	  });
+	},
+	getData: function(id, cb) {
+	  crud.read("4160", "eid=" + id, function(d) {
+		if (d.Rows && d.Rows.length > 0)
+		  reportProgress.reportData = d.Rows[0];
+
+		cb();
+	  });
+	},
+	ui: function() {
+
+	  mo.fn.modal.show({
+		ctaLabel: 'Ok',
+		title: 'Report # ' + reportProgress.reportData.EntryId,
+		class: "ark-modal",
+		content: '<div class="report-progress-wrapper" style="overflow:hidden;padding-bottom:10px;max-width:100%"></div>',
+		contentCallback: function() {
+		  document.querySelector('.report-progress-wrapper').innerHTML = reportProgress.template();
+		  reportProgress.createUI();
+		  reportProgress.updateUI();
+		  reportProgress.startTimer();
+		},
+		ctaCallback: function() {
+		  clearInterval(reportProgress.timer);
+		  clearInterval(reportProgress.sendEmailTimer);
+
+		  mo.fn.modal.hide();
+		}
+	  });
+	},
+	startTimer: function() {
+	  if (reportProgress.reportData.Progress >= 100)
+		return;
+
+	  reportProgress.timer = setInterval(function() {
+		reportProgress.getData(reportProgress.reportData.EntryId, function() {
+		  reportProgress.updateUI();
+		});
+	  },
+										 1000);
+	},
+	updateUI: function() {
+	  var node = document.querySelector('.report-progress-wrapper');
+	  var data = reportProgress.reportData;
+
+	  node.querySelector("#download").style.display = data.Percentage >= 100 && data.Cancelled != 1 ? "block" : "none";
+	  node.querySelector("#cancel").style.display = data.Percentage != 100 && data.Cancelled != 1 ? "block" : "none";
+
+	  node.querySelector("#records").innerHTML = data.TotalRows || "Calculating...";
+
+	  var d = new Date();
+	  d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000);
+	  d = new Date(d);
+
+	  if (data.StartDate) {
+		var startDate = new Date(new Date(data.StartDate) - new Date(d.getTimezoneOffset() * 60 * 1000)).toLocaleString();
+		node.querySelector("#reportRequested").innerHTML = startDate.replace(",", "") || "N/A";
+	  } else
+		node.querySelector("#reportRequested").innerHTML = "Calculating...";
+
+	  if (data.Finish) {
+		var finishDate = new Date(new Date(data.Finish) - new Date(d.getTimezoneOffset() * 60 * 1000)).toLocaleString();
+		node.querySelector("#finish").innerHTML = finishDate.replace(",", "") || "N/A";
+	  } else
+		node.querySelector("#finish").innerHTML = "Calculating...";
+
+	  if (data.Expire) {
+		var finishDate = new Date(new Date(data.Expire) - new Date(d.getTimezoneOffset() * 60 * 1000)).toLocaleString();
+		node.querySelector("#reportExpire").innerHTML = finishDate.split(",")[0] || "N/A";
+	  } else
+		node.querySelector("#reportExpire").innerHTML = "Calculating...";
+
+	  if (data.Percentage == 100 || data.Cancelled == 1)
+		node.querySelector("#elapsed").innerHTML = util.dateDiffToString(new Date(data.Finish), new Date(data.StartDate));
+	  else if (data.StartDate)
+		node.querySelector("#elapsed").innerHTML = util.dateDiffToString(d, new Date(data.StartDate));
+	  else node.querySelector("#elapsed").innerHTML = "Calculating...";
+
+	  if (data.Percentage >= 100 || new Date(data.Finish) < d)
+		node.querySelector("#remaining").innerHTML = "00:00:00";
+	  else if (data.Finish)
+		node.querySelector("#remaining").innerHTML = util.dateDiffToString(new Date(data.Finish), d);
+	  else node.querySelector("#remaining").innerHTML = "N/A";
+
+	  if (data.Percentage) {
+		//just in case
+		if (data.Percentage > 100)
+		  data.Percentage = 100;
+
+		node.querySelector("#progress").style.width = data.Percentage + "%";
+		node.querySelector("#progressLabel").innerHTML = data.Percentage + "%";
+	  }
+
+	  if (data.Cancelled == 1) {
+		node.querySelector("#remaining").innerHTML = "Cancelled";
+		node.querySelector("#finish").innerHTML = "Cancelled";
+		node.querySelector("#reportExpire").innerHTML = "Cancelled";
+	  }
+
+
+	},
+	createUI: function() {
+	  var node = document.querySelector('.report-progress-wrapper');
+	  var data = reportProgress.reportData;
+
+	  document.querySelector(".dxpModalClose").addEventListener("click", function() {
+		clearInterval(reportProgress.timer);
+		clearInterval(reportProgress.sendEmailTimer);
+	  });
+
+
+	  node.querySelector("#download").addEventListener("click", function() {
+		var aLink = document.createElement("a");
+		aLink.setAttribute("target", "_self");
+		aLink.innerHTML = reportProgress.reportData.Filename;
+		aLink.setAttribute("href", reportProgress.reportData.Path);
+		aLink.click();
+	  });
+
+
+	  node.querySelector("#cancel").addEventListener("click", function() {
+
+		reportProgress.reportData.Cancelled = 1;
+
+		crud.update("4164", reportProgress.reportData.EntryId, {
+		  Cancelled: reportProgress.reportData.Cancelled
+		}, function() {
+
+		});
+	  });
+
+
+	  var nbsfSendEmail = {
+		dom: node.querySelector("#send-email"),
+		pages: [{
+		  nav: false,
+		  structure: [{
+			group: [
+			  [{
+				label: "Send an email after generating the report",
+				data: "SendEmail",
+				required: false,
+				type: "toggle",
+				value: reportProgress.reportData.SendEmail == 1 ? "Y" : "N",
+				values: ['N', 'Y'],
+			  }]
+			]
+		  }]
+		}],
+		dataset: {},
+	  };
+	  nbsf.init(nbsfSendEmail, 0);
+
+	  //TODO
+	  if (data.Percentage < 100)
+		reportProgress.sendEmailTimer = setInterval(function() {
+		  if (data.Percentage >= 100)
+			return;
+		  var newValue = document.querySelector("input[data-name=SendEmail]").value == "Y" ? 1 : 0;
+		  if (!reportProgress.reportData.SendEmail)
+			reportProgress.reportData.SendEmail = 0;
+
+		  if (reportProgress.reportData.SendEmail != newValue) {
+			reportProgress.reportData.SendEmail = newValue;
+			crud.update("4164", reportProgress.reportData.EntryId, {
+			  SendEmail: reportProgress.reportData.SendEmail
+			}, function() {});
+		  }
+		});
+
+	  document.querySelector("#send-email .row").style.marginBottom = "0px";
+	  document.querySelector("#send-email .row .name").style.fontWeight = "500px";
+	  document.querySelector("#send-email .row .name").style.fontSize = "19px";
+	  document.querySelector("#send-email .row .name").style.color = "black";
+	  document.querySelector("#send-email .row .name").style.marginLeft = "-2px";
+	  document.querySelector("#send-email .row .fmmcosmin").style.left = "330px";
+	  document.querySelector("#send-email .row .toggle").style.marginTop = "10px";
+
+	  node.querySelector("#reportName").innerHTML = data.Filename;
+	  node.querySelector("#reportRequestedBy").innerHTML = data.RequestedBy;
+	  node.querySelector("#reportRequested").innerHTML = util.getDate(data.StartDate);
+
+
+	  var convertKendoOperator = function(value) {
+		var info = reportProgress.kendoOperators.find(x => x.value == value);
+		if (info) return info.option;
+		return value;
+	  }
+
+	  var convertColumnName = function(name) {
+		name = name.replace("[", "").replace("]", "").replace('"', "").replace('"', "");
+		return name;
+	  }
+
+	  var divSorting = node.querySelector("#sorting");
+	  if (data.Sort) {
+		var getSortString = function(sort) {
+		  return "<div>" + convertColumnName(sort.field) + ": " + (sort.dir == "asc" ? "Ascending" : "Descending") + "</div>";
+		}
+
+		eval('var sort=' + data.Sort);
+		if (sort.length) {
+		  sort.forEach(x => {
+			divSorting.innerHTML += getSortString(x);
+		  });
+		}
+	  }
+
+	  if (!divSorting.innerHTML.trim())
+		divSorting.innerHTML = "No sorting";
+
+	  var divFilters = node.querySelector("#filters");
+	  if (data.Filter) {
+		var getFilterString = function(filter) {
+		  if (new Date(filter.value) != "Invalid Date")
+			filter.value = util.getDate(new Date(filter.value).toISOString(), true);
+		  return "<div><b>" + convertColumnName(filter.field) + "</b> " + convertKendoOperator(filter.operator) + " <b>" + filter.value + "</b></div>";
+		}
+
+		eval('var filter=' + data.Filter);
+		if (filter.filters)
+		  filter.filters.forEach(x => {
+			if (x.filters)
+			  x.filters.forEach(xx => {
+				divFilters.innerHTML += getFilterString(xx);
+			  });
+			else if (x.field) divFilters.innerHTML += getFilterString(x);
+		  });
+		else if (filter.field) divFilters.innerHTML += getFilterString(filter);
+		else if (filter.length) {
+		  filter.forEach(x => {
+			divFilters.innerHTML += getFilterString(filter);
+		  });
+		}
+	  }
+
+	  if (!divFilters.innerHTML.trim())
+		divFilters.innerHTML = "No filters";
+
+	  var divColumns = node.querySelector("#columns");
+	  if (data.Columns) {
+		eval('var columns=' + data.Columns);
+		if (columns.length) {
+		  columns.forEach(x => {
+			divColumns.innerHTML += "<div>" + convertColumnName(x.title || x.field) + "</div>";
+		  });
+		  node.querySelector("#columns_title").innerHTML = "Columns (" + columns.length + ")";
+		}
+	  }
+	},
+	template: function() {
+	  return '<section class="report-progress">' +
+		'<div class="report-progress__left">' +
+		'<div class="report-progress__info">' +
+		'<h2> Information </h2>' +
+		'<div class="report-progress__info__container">' +
+
+		'<div class="report-progress__info__left">' +
+		'<span>Report Name: </span>' +
+		'<span> Requested By: </span>' +
+		'<span >Requested Date:</span>' +
+		'<span >Records:</span>' +
+		'<span >Expire Date:</span>' +
+		'</div>' +
+		'<div class="report-progress__info__right">' +
+		'<span id="reportName" style="text-overflow: ellipsis;white-space: nowrap;max-width: 250px;overflow: hidden;"> </span>' +
+		'<span id="reportRequestedBy"></span>' +
+		'<span id="reportRequested"></span>' +
+		'<span id="records"> </span>' +
+		'<span id="reportExpire"> </span>' +
+		'</div>' +
+
+		'</div>' +
+
+		'<div id="send-email"></div>' +
+		'</div>' +
+
+		'<div class="report-progress__status">' +
+		'<h2> Status </h2>' +
+		'<div class="report-progress__status__container">' +
+
+		'<div class="report-progress__status__left">' +
+		'<span>Elapsed: </span>' +
+		'<span>Remaining: </span>' +
+		'<span >Finish Date:</span>' +
+		'</div>' +
+		'<div class="report-progress__status__right">' +
+		'<span id="elapsed"> N/A </span>' +
+		'<span id="remaining">  N/A</span>' +
+		'<span id="finish">  N/A</span>' +
+		'</div>' +
+		'</div>' +
+		'<div class="report-progress__progress"> ' +
+		'<div id="progress" class="report-progress__progress__bar" style="width:0%">' +
+		'<p id="progressLabel" class="report-progress__progress__percent"> 0% </p>' +
+		'</div>' +
+		'</div>' +
+		'</div>' +
+		'<div class="k-button k-button-action reportingBuild-run" id="download" >Download</div>' +
+		'<div class="k-button k-button-action reportingBuild-cancel" id="cancel" >Cancel</div>' +
+		'</div>' +
+
+		'<div class="report-progress__right">' +
+
+		'<div class="report-progress__sorting">' +
+		'<h2>Sorting</h2>' +
+		'<div id="sorting"> </div>' +
+		'</div>' +
+
+		'<div class="report-progress__filters">' +
+		'<h2>Filters</h2>' +
+		'<div id="filters"> </div>' +
+		'</div>' +
+
+		'<div class="report-progress__columns">' +
+		'<h2 id="columns_title">Columns</h2>' +
+		'<div id="columns" style="height: 208px;overflow-y: auto;"> </div>' +
+		'</div>' +
+
+		'</div>' +
+		'</section>'
+
+	},
+	kendoOperators: [
+	  {
+		option: 'Greater than or equal',
+		value: 'gte'
+	  },
+	  {
+		option: 'Less than or equal',
+		value: 'lte'
+	  },
+	  {
+		option: 'Greater than ',
+		value: 'gt'
+	  },
+	  {
+		option: 'Less than',
+		value: 'lt'
+	  },
+	  {
+		option: 'Equal',
+		value: 'eq'
+	  },
+	  {
+		option: 'Not equal',
+		value: 'neq'
+	  },
+	  {
+		option: 'Is null',
+		value: 'isnull'
+	  },
+	  {
+		option: 'Is not null',
+		value: 'isnotnull'
+	  },
+	  {
+		option: 'Is empty',
+		value: 'isempty'
+	  },
+	  {
+		option: 'Is not empty',
+		value: 'isnotempty'
+	  },
+	  {
+		option: 'Starts with',
+		value: 'startswith'
+	  },
+	  {
+		option: 'Does not start with',
+		value: 'doesnotstartwith'
+	  },
+	  {
+		option: 'Contains',
+		value: 'contains'
+	  },
+	  {
+		option: 'Does not contain',
+		value: 'doesnotcontain'
+	  },
+	  {
+		option: 'Ends with',
+		value: 'endswith'
+	  },
+	  {
+		option: 'Does not end with',
+		value: 'doesnotendwith'
+	  }
+	],
+
+  }
+
+  const util = {
+	getDate: function(date, onlyDate) {
+	  if (date) {
+		var d = date.split('T');
+		if (onlyDate)
+		  return d[0]
+		else {
+		  try {
+			return d[0] + ' ' + d[1].substring(0, 5);
+		  } catch (e) {
+			return d[0]
+		  }
+		}
+	  } else return date;
+	},
+	dateDiffToString: function(a, b) {
+	  let diff = Math.abs(a - b);
+
+	  let ms = diff % 1000;
+	  diff = (diff - ms) / 1000;
+	  let s = diff % 60;
+	  diff = (diff - s) / 60;
+	  let m = diff % 60;
+	  diff = (diff - m) / 60;
+	  let h = diff;
+
+	  let ss = s <= 9 && s >= 0 ? ("0" + s) : s;
+	  let mm = m <= 9 && m >= 0 ? ("0" + m) : m;
+	  let hh = h <= 9 && h >= 0 ? ("0" + h) : h;
+
+	  return hh + ':' + mm + ':' + ss;
+	},
+  }
+
+</script>
+
